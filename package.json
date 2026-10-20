@@ -1,0 +1,26 @@
+{
+  "name": "labverse-flame-test",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "@iwsdk/core": "^0.5.3",
+    "@iwsdk/scene-composition": "^0.5.3",
+    "@iwsdk/xr-input": "^0.5.3",
+    "@preact/signals-core": "^1.14.4",
+    "elics": "^3.4.2",
+    "three": "^0.186.0"
+  }
+}

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Labverse: Flame Test VR</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #0b0f19;
+        font-family: 'Inter', sans-serif;
+        user-select: none;
+      }
+      #app {
+        width: 100vw;
+        height: 100vh;
+      }
+
+      /* Desktop Center Crosshair Reticle */
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 10px;
+        height: 10px;
+        margin-top: -5px;
+        margin-left: -5px;
+        border-radius: 50%;
+        background: rgba(0, 229, 255, 0.9);
+        border: 2px solid #ffffff;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.9);
+        pointer-events: none;
+        z-index: 100;
+        display: none;
+        transition: transform 0.1s ease;
+      }
+
+      #crosshair.active {
+        display: block;
+      }
+
+      #crosshair.hovering {
+        transform: scale(1.6);
+        background: rgba(255, 235, 59, 0.95);
+        box-shadow: 0 0 14px rgba(255, 235, 59, 0.95);
+      }
+
+      /* Minimal Desktop HUD Info at Bottom Edge (Zero Obstruction of 3D Lab) */
+      #desktop-hud {
+        position: absolute;
+        bottom: 14px;
+        left: 20px;
+        padding: 6px 14px;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(0, 229, 255, 0.25);
+        border-radius: 20px;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        pointer-events: none;
+        z-index: 5;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      #desktop-hud span {
+        color: #00e5ff;
+        font-weight: 600;
+      }
+
+      /* Prominent Floating WebXR Entry Button */
+      #vr-btn {
+        position: absolute;
+        bottom: 14px;
+        right: 20px;
+        padding: 8px 18px;
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        border: 1.5px solid #38bdf8;
+        border-radius: 20px;
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        z-index: 100;
+        box-shadow: 0 0 15px rgba(2, 132, 199, 0.5);
+        transition: all 0.2s ease;
+      }
+
+      #vr-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+      }
+
+      /* Informative WebXR Toast Alert */
+      #toast-msg {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 24px;
+        background: rgba(15, 23, 42, 0.95);
+        border: 1.5px solid #f59e0b;
+        border-radius: 12px;
+        color: #fef3c7;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 200;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+        display: none;
+        text-align: center;
+        max-width: 90vw;
+        line-height: 1.5;
+      }
+
+      #toast-msg.visible {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="crosshair"></div>
+    <div id="toast-msg"></div>
+    <div id="desktop-hud">
+      <span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor
+    </div>
+    <button id="vr-btn">🥽 ENTER VR</button>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
