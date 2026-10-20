@@ -38,7 +38,7 @@ export function createLitmusEquipment(materials: MaterialLibrary): THREE.Group {
     // 2. Load the Litmus GLB Model
     const loader = new GLTFLoader();
     loader.load(
-        '/models/litmus.glb',
+        `${import.meta.env.BASE_URL}models/litmus.glb`,
         (gltf) => {
             const litmusModel = gltf.scene;
             // Adjust scale and position as necessary based on the model's original scale

@@ -3,8 +3,8 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
-export default defineConfig({
-  base: './',
+export default defineConfig(({ command }) => ({
+  base: command === 'serve' ? '/' : '/LabVerse-FlameTestVR/',
   plugins: [basicSsl()],
   resolve: {
     alias: {
@@ -16,6 +16,7 @@ export default defineConfig({
     include: ['three'],
   },
   build: {
+    outDir: 'dist',
     rollupOptions: {
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
@@ -23,4 +24,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

@@ -195,7 +195,7 @@ export class VoiceEngine {
             // 1. Prime HTML5 Audio element for instant zero-latency playback across all browsers
             try {
                 if (typeof Audio !== 'undefined' && !this.htmlAudioCache.has(key)) {
-                    const audio = new Audio(`/audio/narration/${key}.wav`);
+                    const audio = new Audio(`${import.meta.env.BASE_URL}audio/narration/${key}.wav`);
                     audio.preload = 'auto';
                     audio.load();
                     this.htmlAudioCache.set(key, audio);
@@ -218,7 +218,7 @@ export class VoiceEngine {
 
         const promise = (async () => {
             try {
-                const res = await fetch(`/audio/narration/${fileKey}.wav`);
+                const res = await fetch(`${import.meta.env.BASE_URL}audio/narration/${fileKey}.wav`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const arrayBuf = await res.arrayBuffer();
 
@@ -462,7 +462,7 @@ export class VoiceEngine {
         try {
             let audio = this.htmlAudioCache.get(fileKey);
             if (!audio) {
-                audio = new Audio(`/audio/narration/${fileKey}.wav`);
+                audio = new Audio(`${import.meta.env.BASE_URL}audio/narration/${fileKey}.wav`);
                 this.htmlAudioCache.set(fileKey, audio);
             } else {
                 audio.currentTime = 0;
