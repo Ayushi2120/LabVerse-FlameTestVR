@@ -569,4 +569,61 @@ export class AudioEngine {
             osc.stop(now + i * 0.08 + 0.7);
         });
     }
+
+    /**
+     * Futuristic wrist menu expansion sound.
+     * Ascending clean crystalline arpeggio with subtle resonance.
+     */
+    public playWristOpen() {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        // Triad arpeggio: C5 (523.25), G5 (783.99), C6 (1046.50)
+        const notes = [523.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+            gain.gain.setValueAtTime(0, now + idx * 0.05);
+            gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.05 + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.45);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.05);
+            osc.stop(now + idx * 0.05 + 0.45);
+        });
+    }
+
+    /**
+     * Futuristic wrist menu option selection confirmation chime.
+     * Crisp dual harmonic tone with soft decay.
+     */
+    public playWristConfirm() {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        const freqs = [1318.51, 1975.53]; // E6 + B6
+        freqs.forEach((freq) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.14, now + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.32);
+        });
+    }
 }

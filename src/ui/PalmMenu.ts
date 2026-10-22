@@ -684,12 +684,25 @@ function buildWristButtonMesh(): THREE.Group {
     bezel.rotation.x = Math.PI / 2;
     g.add(bezel);
 
+    // Cyan-Platinum Holographic Aura Ring
+    const auraRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.027, 0.0012, 16, 36),
+        new THREE.MeshStandardMaterial({
+            color: 0x00e5ff,
+            emissive: 0x00e5ff,
+            emissiveIntensity: 0.85,
+            metalness: 0.8,
+            roughness: 0.2,
+        })
+    );
+    auraRing.name = 'WristAuraRing';
+    g.add(auraRing);
+
     // Knurled grip ring
     const knurlRing = new THREE.Mesh(
         new THREE.TorusGeometry(0.0245, 0.0014, 12, 36),
         AssetMaterials.knurledBrass
     );
-    g.add(knurlRing);
 
     // 2. Dark Titanium Inner Chassis
     const chassisGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.008, 36);
@@ -750,7 +763,6 @@ function buildWristButtonMesh(): THREE.Group {
         new THREE.MeshBasicMaterial({ map: dialTex })
     );
     dialFace.position.z = 0.0042;
-    g.add(dialFace);
 
     // Convex sapphire crystal lens
     const sapphireLens = new THREE.Mesh(
@@ -759,7 +771,14 @@ function buildWristButtonMesh(): THREE.Group {
     );
     sapphireLens.position.z = -0.016;
     sapphireLens.rotation.x = Math.PI;
-    g.add(sapphireLens);
+
+    // Core depression group for tactile poke animation
+    const coreGroup = new THREE.Group();
+    coreGroup.name = 'WristButtonCoreGroup';
+    coreGroup.add(knurlRing);
+    coreGroup.add(dialFace);
+    coreGroup.add(sapphireLens);
+    g.add(coreGroup);
 
     // 4. Silicone / Titanium Watch Strap
     const strapMat = new THREE.MeshStandardMaterial({
@@ -784,10 +803,10 @@ function buildWristButtonMesh(): THREE.Group {
     crown.position.set(0.025, 0, 0);
     g.add(crown);
 
-    // Label banner above watch: "⚡ WRIST MENU"
-    const tapSpr = labelSprite('⚡ WRIST MENU', '#00e5ff');
-    tapSpr.scale.set(0.065, 0.016, 1);
-    tapSpr.position.set(0, 0.044, 0.006);
+    // Label banner above watch: "OPEN LAB MENU"
+    const tapSpr = labelSprite('OPEN LAB MENU', '#00e5ff');
+    tapSpr.scale.set(0.075, 0.018, 1);
+    tapSpr.position.set(0, 0.046, 0.006);
     g.add(tapSpr);
 
     g.userData.isWristButton = true;
@@ -3579,8 +3598,22 @@ export class ExperimentsExpanded {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  PALM MENU CONTROLLER (TRACKED LEFT PALM ANCHOR & POKE)
+//  PALM MENU CONTROLLER (TRACKED LEFT WRIST ANCHOR & POKE)
 // ─────────────────────────────────────────────────────────────
+
+export interface WristAnchorConfig {
+    buttonDorsalOffset: number;   // Configurable distance above dorsal wrist (0.024m)
+    menuDorsalClearance: number;  // Configurable clearance above wrist to crown naturally (0.108m)
+    menuForwardOffset: number;    // Configurable offset towards fingers (0.012m)
+    arcRadius: number;            // Radial distance of fan of options (0.215m)
+}
+
+export const DEFAULT_WRIST_ANCHOR_CONFIG: WristAnchorConfig = {
+    buttonDorsalOffset: 0.024,
+    menuDorsalClearance: 0.108,
+    menuForwardOffset: 0.012,
+    arcRadius: 0.215,
+};
 
 export class PalmMenu {
     private scene: THREE.Scene;
@@ -3590,15 +3623,32 @@ export class PalmMenu {
     private palmGroup: THREE.Group;
     private menuItems: MenuItem[] = [];
     private isPalmOpen = false;
-    private lastPokeTime = 0;
+
+    // Wrist Tracking & Anchor Configuration
+    public anchorConfig: WristAnchorConfig = { ...DEFAULT_WRIST_ANCHOR_CONFIG };
 
     // 3D Wrist Button Elements
     public wristButton: THREE.Group;
+    private wristCoreGroup: THREE.Group | null = null;
+    private wristAuraRing: THREE.Mesh | null = null;
     private isWristLooking = false;
     private wristLookCounter = 0;
     private wristAwayCounter = 0;
     private wristBtnScale = 0;
     private closeMesh!: THREE.Mesh;
+
+    // Hysteresis & Debounce State Machine for Right Index Fingertip Poke
+    private isFingerPokingButton = false;
+    private pokedMenuItemTag: MenuItemTag | null = null;
+    private isFingerPokingClose = false;
+
+    // Visual press depression states (in meters)
+    private wristButtonPress = 0;
+    private closeBtnPress = 0;
+    private itemPressMap = new Map<MenuItemTag, number>();
+
+    // Voice Guidance State Flags
+    private hasPromptedWristDiscovery = false;
 
     // Expanded 3D Panels (6 Options)
     public stepsExp: StepsExpanded;
@@ -3620,6 +3670,8 @@ export class PalmMenu {
         this.wristButton = buildWristButtonMesh();
         this.wristButton.visible = false;
         this.wristButton.scale.set(0, 0, 0);
+        this.wristCoreGroup = this.wristButton.getObjectByName('WristButtonCoreGroup') as THREE.Group;
+        this.wristAuraRing = this.wristButton.getObjectByName('WristAuraRing') as THREE.Mesh;
         this.scene.add(this.wristButton);
 
         // Build compact wrist holographic radial arc menu group
@@ -3650,20 +3702,27 @@ export class PalmMenu {
     private buildCompactItems() {
         // Holographic Connecting Arc Ribbon linking all 6 options
         const arcCurve = new THREE.QuadraticBezierCurve3(
-            new THREE.Vector3(-0.16, 0.04, -0.01),
-            new THREE.Vector3(0, 0.16, 0.02),
-            new THREE.Vector3(0.16, 0.04, -0.01)
+            new THREE.Vector3(-0.21, 0.05, -0.018),
+            new THREE.Vector3(0, 0.265, 0.02),
+            new THREE.Vector3(0.21, 0.05, -0.018)
         );
-        const arcGeo = new THREE.TubeGeometry(arcCurve, 32, 0.0018, 8, false);
-        const arcMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.65 });
+        const arcGeo = new THREE.TubeGeometry(arcCurve, 40, 0.0022, 8, false);
+        const arcMat = new THREE.MeshStandardMaterial({
+            color: 0x00e5ff,
+            emissive: 0x006688,
+            roughness: 0.25,
+            metalness: 0.85,
+            transparent: true,
+            opacity: 0.85,
+        });
         const arcRibbon = new THREE.Mesh(arcGeo, arcMat);
         arcRibbon.userData.isWristMenuBacking = true;
         this.palmGroup.add(arcRibbon);
 
-        // Close Button [✕] at top center
+        // Close Button [✕] at top apex crown (above all 6 options)
         this.closeMesh = createCloseBtn();
-        this.closeMesh.scale.setScalar(0.78);
-        this.closeMesh.position.set(0, 0.165, 0.02);
+        this.closeMesh.scale.setScalar(0.85);
+        this.closeMesh.position.set(0, 0.285, 0.018);
         this.closeMesh.userData.isPalmClose = true;
         this.closeMesh.traverse((child) => { child.userData.isPalmClose = true; });
         this.palmGroup.add(this.closeMesh);
@@ -3675,29 +3734,30 @@ export class PalmMenu {
             createModel: () => THREE.Group;
             theta: number; // Angle in radians around arc
         }[] = [
-            { tag: 'steps',        label: 'Experiment Steps', createModel: buildFlaskIcon,       theta: -1.05 },
-            { tag: 'guide',        label: 'Interaction Guide', createModel: buildHandIcon,        theta: -0.63 },
-            { tag: 'theory',       label: 'Theory Book',       createModel: buildBookIcon,        theta: -0.21 },
-            { tag: 'video',        label: 'Video Book',        createModel: buildMonitorIcon,     theta:  0.21 },
-            { tag: 'observations', label: 'Observation Table', createModel: buildObservationIcon,  theta:  0.63 },
-            { tag: 'experiments',  label: 'Experiments',       createModel: buildMultiFlaskIcon,  theta:  1.05 },
+            { tag: 'steps',        label: 'EXPERIMENT STEPS',    createModel: buildFlaskIcon,       theta: -1.15 },
+            { tag: 'guide',        label: 'INTERACTION GUIDE',   createModel: buildHandIcon,        theta: -0.69 },
+            { tag: 'theory',       label: 'THEORY BOOK',         createModel: buildBookIcon,        theta: -0.23 },
+            { tag: 'video',        label: 'VIDEO GUIDE',         createModel: buildMonitorIcon,     theta:  0.23 },
+            { tag: 'observations', label: 'OBSERVATION TABLE',   createModel: buildObservationIcon,  theta:  0.69 },
+            { tag: 'experiments',  label: 'EXPLORE EXPERIMENTS', createModel: buildMultiFlaskIcon,  theta:  1.15 },
         ];
 
-        const arcRadius = 0.175; // 17.5 cm radial distance crowning above wrist
+        const arcRadius = this.anchorConfig.arcRadius; // 0.215m
         optionsData.forEach(({ tag, label, createModel, theta }) => {
             const modelGroup = createModel();
             const { itemGroup, pedestalMesh } = wrapInHolographicPedestal(modelGroup, label, tag);
 
             // Compute arc position
             const x = Math.sin(theta) * arcRadius;
-            const y = Math.cos(theta) * arcRadius + 0.045; // elevated above watch
-            const z = 0.015 - Math.cos(theta) * 0.025;     // curved toward student
+            const y = Math.cos(theta) * arcRadius + 0.045; // elevated naturally above wrist watch
+            const z = 0.015 - Math.cos(theta) * 0.025;     // curved gently toward student
 
             itemGroup.position.set(x, y, z);
-            itemGroup.rotation.z = -theta * 0.28;
+            itemGroup.rotation.z = -theta * 0.24;
 
             this.palmGroup.add(itemGroup);
             this.menuItems.push({ tag, group: itemGroup, cardMesh: pedestalMesh, iconGroup: modelGroup });
+            this.itemPressMap.set(tag, 0);
         });
     }
 
@@ -3724,6 +3784,28 @@ export class PalmMenu {
         // Idle floating & rotation for 3D models inside glass bubble domes
         for (const item of this.menuItems) {
             item.iconGroup.rotation.y = this.animTime * 0.9;
+        }
+
+        // Pulse holographic aura ring on wrist watch
+        if (this.wristAuraRing) {
+            (this.wristAuraRing.material as THREE.MeshStandardMaterial).emissiveIntensity =
+                0.65 + Math.sin(this.animTime * 3.5) * 0.35;
+        }
+
+        // Animate tactile press returns
+        this.wristButtonPress = THREE.MathUtils.lerp(this.wristButtonPress, 0, 0.18);
+        if (this.wristCoreGroup) {
+            this.wristCoreGroup.position.z = -this.wristButtonPress;
+        }
+
+        this.closeBtnPress = THREE.MathUtils.lerp(this.closeBtnPress, 0, 0.18);
+        this.closeMesh.position.z = 0.018 - this.closeBtnPress;
+
+        for (const item of this.menuItems) {
+            const p = this.itemPressMap.get(item.tag) || 0;
+            const nextP = THREE.MathUtils.lerp(p, 0, 0.18);
+            this.itemPressMap.set(item.tag, nextP);
+            item.group.position.z = (0.015 - Math.cos(item.group.rotation.z / -0.24) * 0.025) - nextP;
         }
 
         const renderer = (this.world as any).renderer;
@@ -3808,6 +3890,12 @@ export class PalmMenu {
                 this.wristAwayCounter = 0;
                 if (this.wristLookCounter >= 2) {
                     this.isWristLooking = true;
+
+                    // Voice 1 — Wrist Discovery (play once when looking at left wrist)
+                    if (!this.hasPromptedWristDiscovery) {
+                        this.hasPromptedWristDiscovery = true;
+                        this.audio.voice.speak('wristDiscovery');
+                    }
                 }
             } else {
                 this.wristAwayCounter = Math.min(20, this.wristAwayCounter + 1);
@@ -3819,16 +3907,38 @@ export class PalmMenu {
                 }
             }
 
-            // 3. Wrist Button Visibility & Positioning (Attached to Left Wrist)
+            // 3. Wrist Button Visibility & 1:1 Physical Positioning
             const targetBtnScale = this.isWristLooking ? 1.0 : 0.0;
-            this.wristBtnScale = THREE.MathUtils.lerp(this.wristBtnScale, targetBtnScale, 0.22);
+            this.wristBtnScale = THREE.MathUtils.lerp(this.wristBtnScale, targetBtnScale, 0.25);
             this.wristButton.scale.setScalar(this.wristBtnScale);
             this.wristButton.visible = this.wristBtnScale > 0.02;
 
-            if (leftWristFound && this.wristButton.visible) {
-                const dorsalOffset = new THREE.Vector3(0, 0.024, 0).applyQuaternion(leftWristQuat);
-                this.wristButton.position.copy(leftWristPos).add(dorsalOffset);
-                this.wristButton.lookAt(camPos);
+            if (leftWristFound) {
+                const dorsalDir = new THREE.Vector3(0, 1, 0).applyQuaternion(leftWristQuat);
+                const forwardDir = new THREE.Vector3(0, 0, -1).applyQuaternion(leftWristQuat);
+
+                if (this.wristButton.visible) {
+                    const targetWatchPos = PalmMenu._scratchTargetPos.copy(leftWristPos)
+                        .addScaledVector(dorsalDir, this.anchorConfig.buttonDorsalOffset);
+                    // 1:1 RIGID SYNC (Zero drift, zero lerp lag)
+                    this.wristButton.position.copy(targetWatchPos);
+                    this.wristButton.lookAt(camPos);
+                }
+
+                // 6. Anchor Floating Holographic Radial Arc Menu to Left Wrist (1:1 RIGID SYNC)
+                if (this.isPalmOpen) {
+                    this.palmGroup.visible = true;
+                    const targetMenuPos = PalmMenu._scratchTargetPos.copy(leftWristPos)
+                        .addScaledVector(dorsalDir, this.anchorConfig.menuDorsalClearance)
+                        .addScaledVector(forwardDir, this.anchorConfig.menuForwardOffset);
+                    // 1:1 RIGID SYNC (Zero drift, zero lag when hand moves or rotates)
+                    this.palmGroup.position.copy(targetMenuPos);
+                    this.palmGroup.lookAt(camPos);
+                }
+            } else {
+                // Tracking loss handling: gracefully hide rather than leaving floating
+                this.wristButton.visible = false;
+                this.palmGroup.visible = false;
             }
 
             // 4. Right Hand Fingertip Tracking for Wrist Button & Menu Interaction
@@ -3893,26 +4003,25 @@ export class PalmMenu {
                 }
             }
 
-            // 5. Right Fingertip Poke on 3D Wrist Button -> Toggle Menu
+            // 5. Right Fingertip Poke on 3D Wrist Button -> Toggle Menu (with Debounce & Visual Press)
             if (rightIndexTipPos && this.wristButton.visible) {
-                const now = Date.now();
-                if (now - this.lastPokeTime > 350) {
-                    const btnPos = new THREE.Vector3();
-                    this.wristButton.getWorldPosition(btnPos);
-                    if (rightIndexTipPos.distanceTo(btnPos) < 0.052) {
-                        this.lastPokeTime = now;
-                        this.audio.playBlip();
+                const btnPos = new THREE.Vector3();
+                this.wristButton.getWorldPosition(btnPos);
+                const distToBtn = rightIndexTipPos.distanceTo(btnPos);
+
+                if (distToBtn < 0.045) {
+                    if (!this.isFingerPokingButton) {
+                        this.isFingerPokingButton = true;
+                        this.wristButtonPress = 0.0035; // 3.5mm tactile depression
+                        this.audio.playWristOpen();
                         this.toggleOpen();
                     }
+                } else if (distToBtn > 0.058) {
+                    // Finger has backed away: reset debounce state
+                    this.isFingerPokingButton = false;
                 }
-            }
-
-            // 6. Anchor Floating Holographic Radial Arc Menu to Left Wrist
-            if (this.isPalmOpen && leftWristFound) {
-                const dorsalOffset = new THREE.Vector3(0, 0.115, 0).applyQuaternion(leftWristQuat);
-                const targetMenuPos = PalmMenu._scratchTargetPos.copy(leftWristPos).add(dorsalOffset);
-                this.palmGroup.position.lerp(targetMenuPos, 0.25);
-                this.palmGroup.lookAt(camPos);
+            } else {
+                this.isFingerPokingButton = false;
             }
 
             // Auto-Collapse when looking away from wrist (unless an expanded panel is active or interacting)
@@ -3924,7 +4033,7 @@ export class PalmMenu {
             if (rightIndexTipPos && this.palmGroup.visible) {
                 const menuCenter = new THREE.Vector3();
                 this.palmGroup.getWorldPosition(menuCenter);
-                if (rightIndexTipPos.distanceTo(menuCenter) < 0.24) {
+                if (rightIndexTipPos.distanceTo(menuCenter) < 0.28) {
                     isInteractingWithMenu = true;
                 }
             }
@@ -3997,29 +4106,45 @@ export class PalmMenu {
     }
 
     private checkCompactPoke(pokePos: THREE.Vector3) {
-        const now = Date.now();
-        if (now - this.lastPokeTime < 320) return;
-
-        // Check close button [✕]
+        // Check close button [✕] at top apex
         const closePos = new THREE.Vector3();
         this.closeMesh.getWorldPosition(closePos);
-        if (pokePos.distanceTo(closePos) < 0.048) {
-            this.lastPokeTime = now;
-            this.audio.playBlip();
-            this.closePalmMenu();
+        const distClose = pokePos.distanceTo(closePos);
+
+        if (distClose < 0.042) {
+            if (!this.isFingerPokingClose) {
+                this.isFingerPokingClose = true;
+                this.closeBtnPress = 0.0035;
+                this.audio.playWristConfirm();
+                this.closePalmMenu();
+            }
             return;
+        } else if (distClose > 0.055) {
+            this.isFingerPokingClose = false;
         }
 
         // Check 6 radial arc menu options
+        let hoveredTag: MenuItemTag | null = null;
         for (const item of this.menuItems) {
             const iPos = new THREE.Vector3();
             item.group.getWorldPosition(iPos);
-            if (pokePos.distanceTo(iPos) < 0.065) {
-                this.lastPokeTime = now;
-                this.audio.playBlip();
-                this.openExpanded(item.tag);
+            const dist = pokePos.distanceTo(iPos);
+
+            if (dist < 0.052) {
+                hoveredTag = item.tag;
+                if (this.pokedMenuItemTag !== item.tag) {
+                    this.pokedMenuItemTag = item.tag;
+                    this.itemPressMap.set(item.tag, 0.0035); // 3.5mm depression
+                    this.audio.playWristConfirm();
+                    this.openExpanded(item.tag);
+                }
                 return;
             }
+        }
+
+        // If finger has left the option proximity, reset debounce
+        if (!hoveredTag) {
+            this.pokedMenuItemTag = null;
         }
     }
 
@@ -4038,12 +4163,30 @@ export class PalmMenu {
         targetPos.y = Math.max(1.15, Math.min(1.45, targetPos.y));
 
         switch (tag) {
-            case 'steps':        this.stepsExp.show(targetPos, camPos); break;
-            case 'guide':        this.guideExp.show(targetPos, camPos); break;
-            case 'theory':       this.bookExp.show(targetPos, camPos); break;
-            case 'video':        this.videoExp.show(targetPos, camPos); break;
-            case 'observations': this.obsExp.show(targetPos, camPos); break;
-            case 'experiments':  this.expExp.show(targetPos, camPos); break;
+            case 'steps':
+                this.stepsExp.show(targetPos, camPos);
+                this.audio.voice.speak('stepsNarration');
+                break;
+            case 'guide':
+                this.guideExp.show(targetPos, camPos);
+                this.audio.voice.speak('guideNarration');
+                break;
+            case 'theory':
+                this.bookExp.show(targetPos, camPos);
+                this.audio.voice.speak('theoryNarration');
+                break;
+            case 'video':
+                this.videoExp.show(targetPos, camPos);
+                this.audio.voice.speak('videoNarration');
+                break;
+            case 'observations':
+                this.obsExp.show(targetPos, camPos);
+                this.audio.voice.speak('obsNarration');
+                break;
+            case 'experiments':
+                this.expExp.show(targetPos, camPos);
+                this.audio.voice.speak('exploreNarration');
+                break;
         }
     }
 
@@ -4060,7 +4203,8 @@ export class PalmMenu {
         if (this.isPalmOpen) return;
         this.isPalmOpen = true;
         this.palmGroup.visible = true;
-        this.audio.playBlip();
+        this.audio.playWristOpen();
+        this.audio.voice.speak('wristActivated');
     }
 
     private closePalmMenu() {
@@ -4105,35 +4249,50 @@ export class PalmMenu {
         if (!hit && this.wristButton.visible) {
             const btnPos = new THREE.Vector3();
             this.wristButton.getWorldPosition(btnPos);
-            if (pokePos.distanceTo(btnPos) < 0.052) {
-                this.audio.playBlip();
-                this.toggleOpen();
-                return true;
+            const dist = pokePos.distanceTo(btnPos);
+            if (dist < 0.045) {
+                if (!this.isFingerPokingButton) {
+                    this.isFingerPokingButton = true;
+                    this.wristButtonPress = 0.0035;
+                    this.audio.playWristOpen();
+                    this.toggleOpen();
+                    return true;
+                }
+            } else if (dist > 0.058) {
+                this.isFingerPokingButton = false;
             }
         }
 
         // Check compact radial arc menu poke
         if (!hit && this.isPalmOpen && this.palmGroup.visible) {
-            const now = Date.now();
-            if (now - this.lastPokeTime > 320) {
-                const closePos = new THREE.Vector3();
-                this.closeMesh.getWorldPosition(closePos);
-                if (pokePos.distanceTo(closePos) < 0.048) {
-                    this.lastPokeTime = now;
-                    this.audio.playBlip();
+            const closePos = new THREE.Vector3();
+            this.closeMesh.getWorldPosition(closePos);
+            const distClose = pokePos.distanceTo(closePos);
+
+            if (distClose < 0.042) {
+                if (!this.isFingerPokingClose) {
+                    this.isFingerPokingClose = true;
+                    this.closeBtnPress = 0.0035;
+                    this.audio.playWristConfirm();
                     this.closePalmMenu();
                     return true;
                 }
+            } else if (distClose > 0.055) {
+                this.isFingerPokingClose = false;
+            }
 
-                for (const item of this.menuItems) {
-                    const iPos = new THREE.Vector3();
-                    item.group.getWorldPosition(iPos);
-                    if (pokePos.distanceTo(iPos) < 0.065) {
-                        this.lastPokeTime = now;
-                        this.audio.playBlip();
+            for (const item of this.menuItems) {
+                const iPos = new THREE.Vector3();
+                item.group.getWorldPosition(iPos);
+                const dist = pokePos.distanceTo(iPos);
+
+                if (dist < 0.052) {
+                    if (this.pokedMenuItemTag !== item.tag) {
+                        this.pokedMenuItemTag = item.tag;
+                        this.itemPressMap.set(item.tag, 0.0035);
+                        this.audio.playWristConfirm();
                         this.openExpanded(item.tag);
-                        hit = true;
-                        break;
+                        return true;
                     }
                 }
             }
@@ -4154,18 +4313,22 @@ export class PalmMenu {
         let cur: THREE.Object3D | null = hitObj;
         while (cur) {
             if (cur === this.wristButton || cur.userData?.isWristButton || cur.name === 'WristButtonMeshGroup') {
-                this.audio.playBlip();
+                this.audio.playWristOpen();
+                this.wristButtonPress = 0.0035;
                 this.toggleOpen();
                 return true;
             }
             if (cur === this.closeMesh || cur.userData?.isPalmClose) {
-                this.audio.playBlip();
+                this.audio.playWristConfirm();
+                this.closeBtnPress = 0.0035;
                 this.closePalmMenu();
                 return true;
             }
             if (cur.userData?.palmTag) {
-                this.audio.playBlip();
-                this.openExpanded(cur.userData.palmTag);
+                const tag = cur.userData.palmTag as MenuItemTag;
+                this.audio.playWristConfirm();
+                this.itemPressMap.set(tag, 0.0035);
+                this.openExpanded(tag);
                 return true;
             }
             if (cur.userData?.isWristMenuBacking) {

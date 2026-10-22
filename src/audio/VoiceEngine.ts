@@ -21,6 +21,15 @@ export type VoiceStageKey =
     | 'cleanWire'
     | 'complete'
     | 'snitchCaught'
+    | 'wristDiscovery'
+    | 'wristActivated'
+    | 'optionSelected'
+    | 'stepsNarration'
+    | 'guideNarration'
+    | 'theoryNarration'
+    | 'videoNarration'
+    | 'obsNarration'
+    | 'exploreNarration'
     // Backwards compatibility aliases
     | 'intro'
     | 'grabWire'
@@ -52,6 +61,17 @@ export const NARRATION_LINES: Record<VoiceStageKey, string> = {
     cleanWire: "Clean the platinum wire before testing a new salt.",
     complete: "Experiment complete. Select another salt to compare the results.",
     snitchCaught: "Well caught, Seeker!",
+
+    // Wrist-Attached 3D Menu English Narration Suite
+    wristDiscovery: "When you are ready, look at your left wrist to open your Lab Menu.",
+    wristActivated: "Your Lab Menu is open. Point with your right index finger and gently tap an option to continue.",
+    optionSelected: "Option selected. Opening your guide now.",
+    stepsNarration: "Follow the experiment one step at a time. You can reopen this guide whenever you need help.",
+    guideNarration: "Use your right index finger to gently tap the highlighted objects. Watch for the glow to confirm your selection.",
+    theoryNarration: "This guide explains the scientific principle behind the flame test. You can return to the experiment whenever you are ready.",
+    videoNarration: "Select a video to see the procedure demonstrated. Close the guide when you are ready to continue.",
+    obsNarration: "Record your observations in the laboratory notebook. Compare the flame colour with the available reference before identifying the salt.",
+    exploreNarration: "Choose an available experiment to learn more. Some experiments may be marked as coming soon.",
 
     // Aliases
     intro: "Welcome to the Flame Test Experiment! Today, you'll identify different metal ions by observing the colours they produce in a flame.",
