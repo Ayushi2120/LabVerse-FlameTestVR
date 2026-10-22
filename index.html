@@ -98,6 +98,35 @@
         box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
       }
 
+      /* Desktop Floating Menu Button */
+      #menu-btn {
+        position: absolute;
+        bottom: 56px;
+        left: 20px;
+        padding: 7px 16px;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%);
+        border: 1.5px solid #00e5ff;
+        border-radius: 20px;
+        color: #00e5ff;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        z-index: 100;
+        box-shadow: 0 0 14px rgba(0, 229, 255, 0.35);
+        transition: all 0.2s ease;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      #menu-btn:hover {
+        transform: scale(1.05);
+        background: #0284c7;
+        color: #ffffff;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.7);
+      }
+
       /* Informative WebXR Toast Alert */
       #toast-msg {
         position: absolute;
@@ -131,8 +160,9 @@
     <div id="app"></div>
     <div id="crosshair"></div>
     <div id="toast-msg"></div>
+    <button id="menu-btn">📋 3D MENU (M)</button>
     <div id="desktop-hud">
-      <span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor
+      <span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>M</span> Menu &bull; <span>Q</span> Release Wire
     </div>
     <button id="vr-btn">🥽 ENTER VR</button>
     <script type="module" src="/src/main.ts"></script>

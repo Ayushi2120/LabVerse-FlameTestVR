@@ -10,7 +10,7 @@ import { AudioEngine } from '../audio/AudioEngine';
 //  • Borosilicate Optical Glass Orb with Holographic Quantum Core
 // ============================================================
 
-export type MenuItemTag = 'steps' | 'guide' | 'theory' | 'video';
+export type MenuItemTag = 'steps' | 'guide' | 'theory' | 'video' | 'observations' | 'experiments';
 
 export interface MenuItem {
     tag: MenuItemTag;
@@ -476,6 +476,190 @@ function buildSphereIcon(): THREE.Group {
     return g;
 }
 
+function buildObservationIcon(): THREE.Group {
+    const g = new THREE.Group();
+
+    // Clipboard backing board (machined dark titanium)
+    const board = new THREE.Mesh(
+        new THREE.BoxGeometry(0.030, 0.040, 0.0022),
+        AssetMaterials.darkTitanium
+    );
+    g.add(board);
+
+    // Beveled brass binder clamp on top
+    const clamp = new THREE.Mesh(
+        new THREE.BoxGeometry(0.018, 0.006, 0.004),
+        AssetMaterials.polishedBrass
+    );
+    clamp.position.set(0, 0.018, 0.002);
+    g.add(clamp);
+
+    // Holographic luminescent data grid display surface
+    const gridMat = new THREE.MeshStandardMaterial({
+        color: 0x0a192f,
+        emissive: 0x00e5ff,
+        emissiveIntensity: 0.45,
+        roughness: 0.2,
+        metalness: 0.8
+    });
+    const grid = new THREE.Mesh(new THREE.PlaneGeometry(0.026, 0.032), gridMat);
+    grid.position.set(0, -0.002, 0.0013);
+    g.add(grid);
+
+    // Miniature horizontal ledger rules
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    for (let i = 0; i < 4; i++) {
+        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.020, 0.001), lineMat);
+        line.position.set(0, 0.009 - i * 0.006, 0.0016);
+        g.add(line);
+    }
+
+    // Little glowing LED indicator dot on clamp
+    const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.0016, 12, 10),
+        new THREE.MeshBasicMaterial({ color: 0x00ff88 })
+    );
+    led.position.set(0.006, 0.018, 0.0042);
+    g.add(led);
+
+    return g;
+}
+
+function buildExperimentsIcon(): THREE.Group {
+    const g = new THREE.Group();
+
+    // Borosilicate Erlenmeyer Conical Flask
+    const bodyGeo = new THREE.CylinderGeometry(0.006, 0.018, 0.026, 24);
+    const bodyMesh = new THREE.Mesh(bodyGeo, AssetMaterials.opticalGlass);
+    bodyMesh.position.y = -0.004;
+    g.add(bodyMesh);
+
+    // Cylindrical neck with beaded rim
+    const neck = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.005, 0.005, 0.014, 20),
+        AssetMaterials.opticalGlass
+    );
+    neck.position.y = 0.013;
+    g.add(neck);
+
+    const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.0056, 0.0012, 8, 20),
+        AssetMaterials.polishedBrass
+    );
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 0.020;
+    g.add(rim);
+
+    // Luminescent quantum chemical fluid inside flask
+    const liquid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.005, 0.016, 0.014, 20),
+        new THREE.MeshStandardMaterial({
+            color: 0x00e5ff,
+            emissive: 0x0088cc,
+            emissiveIntensity: 1.4,
+            roughness: 0.1,
+            metalness: 0.2,
+            transparent: true,
+            opacity: 0.88
+        })
+    );
+    liquid.position.y = -0.009;
+    g.add(liquid);
+
+    // Tilted orbital discovery rings
+    const ring1 = new THREE.Mesh(
+        new THREE.TorusGeometry(0.021, 0.001, 8, 28),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 })
+    );
+    ring1.rotation.x = Math.PI / 3;
+    ring1.rotation.y = Math.PI / 6;
+    g.add(ring1);
+
+    const ring2 = new THREE.Mesh(
+        new THREE.TorusGeometry(0.019, 0.0008, 6, 24),
+        new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.75 })
+    );
+    ring2.rotation.x = -Math.PI / 4;
+    ring2.rotation.z = Math.PI / 4;
+    g.add(ring2);
+
+    return g;
+}
+
+function buildWristButtonMesh(): THREE.Group {
+    const g = new THREE.Group();
+    g.name = 'WristButtonMeshGroup';
+
+    // Outer smartwatch bezel / titanium chassis
+    const chassis = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.021, 0.023, 0.006, 32),
+        AssetMaterials.darkTitanium
+    );
+    chassis.rotation.x = Math.PI / 2;
+    g.add(chassis);
+
+    // Knurled decorative brass bezel ring
+    const bezel = new THREE.Mesh(
+        new THREE.TorusGeometry(0.021, 0.0015, 12, 32),
+        AssetMaterials.knurledBrass
+    );
+    g.add(bezel);
+
+    // Dark dial face
+    const dialFace = new THREE.Mesh(
+        new THREE.CircleGeometry(0.0195, 32),
+        new THREE.MeshStandardMaterial({
+            color: 0x060d17,
+            roughness: 0.2,
+            metalness: 0.8
+        })
+    );
+    dialFace.position.z = 0.0032;
+    g.add(dialFace);
+
+    // Illuminated holographic core emblem (pulsing cyan ring)
+    const coreRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.008, 0.014, 24),
+        new THREE.MeshBasicMaterial({
+            color: 0x00e5ff,
+            side: THREE.DoubleSide
+        })
+    );
+    coreRing.position.z = 0.0034;
+    g.add(coreRing);
+
+    // Center jewel emitter
+    const centerJewel = new THREE.Mesh(
+        new THREE.SphereGeometry(0.004, 16, 12),
+        new THREE.MeshStandardMaterial({
+            color: 0x00ffff,
+            emissive: 0x00e5ff,
+            emissiveIntensity: 1.5,
+            roughness: 0.1
+        })
+    );
+    centerJewel.position.z = 0.004;
+    g.add(centerJewel);
+
+    // Convex sapphire crystal cover
+    const sapphireCover = new THREE.Mesh(
+        new THREE.SphereGeometry(0.020, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.25),
+        AssetMaterials.sapphireLens
+    );
+    sapphireCover.position.z = -0.014;
+    sapphireCover.rotation.x = Math.PI;
+    g.add(sapphireCover);
+
+    // Floating text label sprite
+    const spr = labelSprite('⚡ MENU', '#00e5ff');
+    spr.scale.set(0.055, 0.014, 1);
+    spr.position.set(0, 0.030, 0.004);
+    g.add(spr);
+
+    g.userData.isWristButton = true;
+    return g;
+}
+
 // ─────────────────────────────────────────────────────────────
 //  EXPANDED CONTENT 1: EXPERIMENT STEPS (PRECISION TURRET)
 // ─────────────────────────────────────────────────────────────
@@ -874,6 +1058,32 @@ export class StepsExpanded {
         } else {
             this.isGrabbed = false;
         }
+    }
+
+    public handleClick(hitObj: THREE.Object3D, _point?: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+        let cur: THREE.Object3D | null = hitObj;
+        while (cur) {
+            if (cur === this.closeMesh || cur.userData?.isPalmClose) {
+                this.audio.playBlip();
+                this.hide();
+                return true;
+            }
+            if (cur === this.nextBtn || cur.userData?.isStepsNext) {
+                this.selectedStep = (this.selectedStep + 1) % this.steps.length;
+                this.audio.playBlip();
+                this.renderStepText();
+                return true;
+            }
+            if (cur === this.backBtn || cur.userData?.isStepsBack) {
+                this.selectedStep = (this.selectedStep - 1 + this.steps.length) % this.steps.length;
+                this.audio.playBlip();
+                this.renderStepText();
+                return true;
+            }
+            cur = cur.parent;
+        }
+        return false;
     }
 }
 
@@ -1377,6 +1587,32 @@ export class GuideExpanded {
             this.isGrabbed = false;
         }
     }
+
+    public handleClick(hitObj: THREE.Object3D, _point?: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+        let cur: THREE.Object3D | null = hitObj;
+        while (cur) {
+            if (cur === this.closeMesh || cur.userData?.isPalmClose) {
+                this.audio.playBlip();
+                this.hide();
+                return true;
+            }
+            if (cur === this.nextBtn || cur.userData?.isGuideNext) {
+                this.selectedGesture = (this.selectedGesture + 1) % this.gestures.length;
+                this.audio.playBlip();
+                this.renderGestureText();
+                return true;
+            }
+            if (cur === this.backBtn || cur.userData?.isGuideBack) {
+                this.selectedGesture = (this.selectedGesture - 1 + this.gestures.length) % this.gestures.length;
+                this.audio.playBlip();
+                this.renderGestureText();
+                return true;
+            }
+            cur = cur.parent;
+        }
+        return false;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1848,6 +2084,40 @@ export class BookExpanded {
             this.isGrabbed = false;
         }
     }
+
+    public handleClick(hitObj: THREE.Object3D, _point?: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+        let cur: THREE.Object3D | null = hitObj;
+        while (cur) {
+            if (cur === this.closeMesh || cur.userData?.isPalmClose) {
+                this.audio.playBlip();
+                this.hide();
+                return true;
+            }
+            if (cur === this.nextBtn || cur.userData?.isBookNext) {
+                if (this.currentPage < this.pages.length - 1 && !this.isFlipping) {
+                    this.isFlipping = true;
+                    this.flipDirection = 'next';
+                    this.flipProgress = 0;
+                    this.turningPageGroup.visible = true;
+                    this.audio.playBlip();
+                }
+                return true;
+            }
+            if (cur === this.prevBtn || cur.userData?.isBookPrev) {
+                if (this.currentPage > 0 && !this.isFlipping) {
+                    this.isFlipping = true;
+                    this.flipDirection = 'prev';
+                    this.flipProgress = 0;
+                    this.turningPageGroup.visible = true;
+                    this.audio.playBlip();
+                }
+                return true;
+            }
+            cur = cur.parent;
+        }
+        return false;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2122,6 +2392,1036 @@ export class VideoExpanded {
             this.isGrabbed = false;
         }
     }
+
+    public handleClick(hitObj: THREE.Object3D, _point?: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+        let cur: THREE.Object3D | null = hitObj;
+        while (cur) {
+            if (cur === this.closeMesh || cur.userData?.isPalmClose) {
+                this.audio.playBlip();
+                this.hide();
+                return true;
+            }
+            if (cur === this.playBtn) {
+                this.isPlaying = !this.isPlaying;
+                this.audio.playBlip();
+                this.renderScreen();
+                return true;
+            }
+            cur = cur.parent;
+        }
+        return false;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  EXPANDED CONTENT 5: OBSERVATION TABLE (LIVE CATION LEDGER)
+// ─────────────────────────────────────────────────────────────
+
+export class ObservationExpanded {
+    public group: THREE.Group;
+    private audio: AudioEngine;
+    private closeMesh: THREE.Mesh;
+    private refreshBtn: THREE.Mesh;
+    private boardMesh: THREE.Mesh;
+    private canvas: HTMLCanvasElement;
+    private canvasTexture: THREE.CanvasTexture;
+
+    private isGrabbed = false;
+    private grabOffset = new THREE.Vector3();
+    private lastPokeTime = 0;
+
+    // Live observations from LabBook3D
+    private observationsMap: Map<string, any> = new Map();
+
+    private readonly defaultSalts = [
+        { letter: 'A', name: 'Lithium Chloride', formula: 'LiCl', flameColor: 0xe60033, flameHex: '#e60033', flameName: 'Crimson Red' },
+        { letter: 'B', name: 'Sodium Chloride', formula: 'NaCl', flameColor: 0xffb700, flameHex: '#ffb700', flameName: 'Intense Yellow-Orange' },
+        { letter: 'C', name: 'Potassium Chloride', formula: 'KCl', flameColor: 0xc896ff, flameHex: '#c896ff', flameName: 'Lilac / Pale Violet' },
+        { letter: 'D', name: 'Calcium Chloride', formula: 'CaCl₂', flameColor: 0xff4500, flameHex: '#ff4500', flameName: 'Brick Red-Orange' },
+        { letter: 'E', name: 'Strontium Chloride', formula: 'SrCl₂', flameColor: 0xff1a1a, flameHex: '#ff1a1a', flameName: 'Deep Scarlet' },
+        { letter: 'F', name: 'Copper(II) Sulfate', formula: 'CuSO₄', flameColor: 0x00ffcc, flameHex: '#00ffcc', flameName: 'Emerald Blue-Green' },
+    ];
+
+    constructor(scene: THREE.Scene, audio: AudioEngine) {
+        this.audio = audio;
+        this.group = new THREE.Group();
+        this.group.name = 'ObservationExpanded';
+        this.group.visible = false;
+
+        // Titanium back chassis
+        const frameGeo = new THREE.BoxGeometry(0.63, 0.45, 0.008);
+        const frameMat = AssetMaterials.darkTitanium;
+        const frame = new THREE.Mesh(frameGeo, frameMat);
+        frame.position.z = -0.005;
+        this.group.add(frame);
+
+        // Cyan glowing border
+        const borderGeo = new THREE.BoxGeometry(0.636, 0.456, 0.004);
+        const borderMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true });
+        const border = new THREE.Mesh(borderGeo, borderMat);
+        border.position.z = -0.003;
+        this.group.add(border);
+
+        // Top grab bar
+        const grabBarGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.52, 16);
+        grabBarGeo.rotateZ(Math.PI / 2);
+        const grabBarMat = AssetMaterials.brushedSteel;
+        const grabBar = new THREE.Mesh(grabBarGeo, grabBarMat);
+        grabBar.position.set(0, 0.215, 0.005);
+        this.group.add(grabBar);
+
+        // High resolution 2D Canvas for table
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 1024;
+        this.canvas.height = 720;
+        this.canvasTexture = new THREE.CanvasTexture(this.canvas);
+        this.canvasTexture.colorSpace = THREE.SRGBColorSpace;
+
+        const boardGeo = new THREE.PlaneGeometry(0.61, 0.43);
+        const boardMat = new THREE.MeshBasicMaterial({ map: this.canvasTexture, transparent: true });
+        this.boardMesh = new THREE.Mesh(boardGeo, boardMat);
+        this.boardMesh.name = 'ObservationBoardMesh';
+        this.boardMesh.position.z = 0.002;
+        this.boardMesh.userData.isObservationPanel = true;
+        this.group.add(this.boardMesh);
+
+        // Close Button [X]
+        this.closeMesh = createCloseBtn();
+        this.closeMesh.position.set(0.285, 0.195, 0.008);
+        this.closeMesh.userData.isObsClose = true;
+        this.group.add(this.closeMesh);
+
+        // Refresh Button
+        const rfGeo = new THREE.BoxGeometry(0.065, 0.024, 0.006);
+        const rfMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.7 });
+        this.refreshBtn = new THREE.Mesh(rfGeo, rfMat);
+        this.refreshBtn.position.set(0.21, 0.195, 0.008);
+        this.refreshBtn.userData.isObsRefresh = true;
+
+        const rfSpr = labelSprite('REFRESH ⟳', '#38bdf8');
+        rfSpr.scale.set(0.06, 0.02, 1);
+        rfSpr.position.z = 0.005;
+        this.refreshBtn.add(rfSpr);
+        this.group.add(this.refreshBtn);
+
+        scene.add(this.group);
+        this.renderTable();
+    }
+
+    public setObservations(obs: Map<string, any>) {
+        if (!obs) return;
+        this.observationsMap = obs;
+        if (this.group.visible) {
+            this.renderTable();
+        }
+    }
+
+    private renderTable() {
+        const c = this.canvas.getContext('2d')!;
+        c.clearRect(0, 0, 1024, 720);
+
+        // Glassmorphic background
+        c.fillStyle = 'rgba(10, 18, 36, 0.95)';
+        c.beginPath();
+        c.roundRect(8, 8, 1008, 704, 18);
+        c.fill();
+
+        c.strokeStyle = '#00e5ff';
+        c.lineWidth = 3;
+        c.beginPath();
+        c.roundRect(8, 8, 1008, 704, 18);
+        c.stroke();
+
+        // Header Title
+        c.fillStyle = '#00e5ff';
+        c.font = 'bold 30px "Inter", system-ui, sans-serif';
+        c.textAlign = 'left';
+        c.fillText('🔬 EXPERIMENT OBSERVATION LEDGER', 36, 52);
+
+        c.fillStyle = '#94a3b8';
+        c.font = '16px "Inter", system-ui, sans-serif';
+        c.fillText('Atomic Emission Spectroscopy • Qualitative Metal Cation Identification', 36, 80);
+
+        // Divider rule
+        c.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(36, 96);
+        c.lineTo(988, 96);
+        c.stroke();
+
+        // Table Column Headers
+        c.fillStyle = 'rgba(15, 30, 58, 0.85)';
+        c.fillRect(36, 108, 952, 44);
+        c.strokeStyle = 'rgba(0, 229, 255, 0.25)';
+        c.strokeRect(36, 108, 952, 44);
+
+        c.fillStyle = '#38bdf8';
+        c.font = 'bold 15px "Inter", monospace';
+        c.textAlign = 'left';
+        c.fillText('VIAL', 56, 136);
+        c.fillText('SALT / COMPOUND', 140, 136);
+        c.fillText('FORMULA', 380, 136);
+        c.fillText('FLAME EMISSION SPECTRUM', 530, 136);
+        c.fillText('STATUS', 840, 136);
+
+        let completedCount = 0;
+
+        // Render 6 Rows
+        this.defaultSalts.forEach((def, i) => {
+            const y = 162 + i * 72;
+            const isTested = this.observationsMap && this.observationsMap.has(def.letter);
+            const obs = isTested ? this.observationsMap.get(def.letter) : null;
+            if (isTested) completedCount++;
+
+            // Row background zebra
+            c.fillStyle = i % 2 === 0 ? 'rgba(16, 28, 52, 0.65)' : 'rgba(12, 22, 42, 0.65)';
+            c.fillRect(36, y, 952, 64);
+            c.strokeStyle = isTested ? 'rgba(0, 255, 136, 0.25)' : 'rgba(255, 255, 255, 0.08)';
+            c.strokeRect(36, y, 952, 64);
+
+            // Vial Badge
+            c.fillStyle = isTested ? '#0284c7' : '#334155';
+            c.beginPath();
+            c.arc(72, y + 32, 18, 0, Math.PI * 2);
+            c.fill();
+            c.strokeStyle = isTested ? '#38bdf8' : '#64748b';
+            c.lineWidth = 2;
+            c.stroke();
+
+            c.fillStyle = '#ffffff';
+            c.font = 'bold 18px "Inter", sans-serif';
+            c.textAlign = 'center';
+            c.fillText(def.letter, 72, y + 38);
+
+            // Salt Identifier
+            c.textAlign = 'left';
+            c.fillStyle = isTested ? '#f8fafc' : '#94a3b8';
+            c.font = isTested ? 'bold 18px "Inter", sans-serif' : '17px "Inter", sans-serif';
+            c.fillText(isTested ? (obs.name || def.name) : `Mystery Salt ${def.letter}`, 140, y + 38);
+
+            // Chemical Formula
+            c.fillStyle = isTested ? '#38bdf8' : '#64748b';
+            c.font = '16px monospace';
+            c.fillText(isTested ? (obs.formula || def.formula) : 'Unknown (M⁺Cl⁻)', 380, y + 38);
+
+            // Flame Color Swatch & Description
+            const flameColorHex = isTested ? (obs.flameColor ? '#' + Number(obs.flameColor).toString(16).padStart(6, '0') : def.flameHex) : '#475569';
+            c.fillStyle = flameColorHex;
+            c.beginPath();
+            c.arc(546, y + 32, 12, 0, Math.PI * 2);
+            c.fill();
+            c.strokeStyle = isTested ? '#ffffff' : '#64748b';
+            c.lineWidth = 2;
+            c.stroke();
+
+            // Swatch glow if tested
+            if (isTested) {
+                c.shadowColor = flameColorHex;
+                c.shadowBlur = 12;
+                c.beginPath();
+                c.arc(546, y + 32, 12, 0, Math.PI * 2);
+                c.stroke();
+                c.shadowBlur = 0;
+            }
+
+            c.fillStyle = isTested ? '#f1f5f9' : '#64748b';
+            c.font = '16px "Inter", sans-serif';
+            c.fillText(isTested ? (obs.flameName || def.flameName) : 'Awaiting Flame Test...', 572, y + 38);
+
+            // Status Pill
+            if (isTested) {
+                c.fillStyle = 'rgba(0, 255, 136, 0.16)';
+                c.beginPath();
+                c.roundRect(830, y + 16, 136, 32, 8);
+                c.fill();
+                c.strokeStyle = '#00ff88';
+                c.lineWidth = 1.5;
+                c.stroke();
+
+                c.fillStyle = '#00ff88';
+                c.font = 'bold 13px "Inter", sans-serif';
+                c.textAlign = 'center';
+                c.fillText('CONFIRMED ✓', 898, y + 37);
+            } else {
+                c.fillStyle = 'rgba(245, 158, 11, 0.14)';
+                c.beginPath();
+                c.roundRect(830, y + 16, 136, 32, 8);
+                c.fill();
+                c.strokeStyle = '#f59e0b';
+                c.lineWidth = 1.5;
+                c.stroke();
+
+                c.fillStyle = '#f59e0b';
+                c.font = 'bold 13px "Inter", sans-serif';
+                c.textAlign = 'center';
+                c.fillText('PENDING ⏳', 898, y + 37);
+            }
+        });
+
+        // Footer Summary
+        c.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(36, 610);
+        c.lineTo(988, 610);
+        c.stroke();
+
+        c.fillStyle = '#00e5ff';
+        c.font = 'bold 16px "Inter", sans-serif';
+        c.textAlign = 'left';
+        c.fillText(`STATUS: ${completedCount} / 6 SALTS TESTED`, 36, 642);
+
+        c.fillStyle = '#94a3b8';
+        c.font = '14px "Inter", sans-serif';
+        c.fillText('Procedure: Dip loop into 6M HCl, collect salt powder, and insert into burner oxidation zone.', 36, 672);
+
+        c.textAlign = 'right';
+        c.fillStyle = '#38bdf8';
+        c.font = '14px "Inter", sans-serif';
+        c.fillText('Tip: Observations update automatically in real-time as you test.', 988, 656);
+
+        this.canvasTexture.needsUpdate = true;
+    }
+
+    public update(_delta: number) {}
+
+    public show(pos: THREE.Vector3, lookAtPos: THREE.Vector3) {
+        this.group.position.copy(pos);
+        this.group.lookAt(lookAtPos);
+        this.group.visible = true;
+        this.isGrabbed = false;
+        this.renderTable();
+    }
+
+    public hide() {
+        this.group.visible = false;
+        this.isGrabbed = false;
+    }
+
+    public isVisible() {
+        return this.group.visible;
+    }
+
+    public checkPoke(pokePos: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+        const now = Date.now();
+        if (now - this.lastPokeTime < 320) return false;
+
+        const closePos = new THREE.Vector3();
+        this.closeMesh.getWorldPosition(closePos);
+        if (pokePos.distanceTo(closePos) < 0.08) {
+            this.lastPokeTime = now;
+            this.audio.playBlip();
+            this.hide();
+            return true;
+        }
+
+        const rfPos = new THREE.Vector3();
+        this.refreshBtn.getWorldPosition(rfPos);
+        if (pokePos.distanceTo(rfPos) < 0.08) {
+            this.lastPokeTime = now;
+            this.audio.playBlip();
+            this.renderTable();
+            return true;
+        }
+
+        return false;
+    }
+
+    public checkGrab(handPos: THREE.Vector3, isPinchingOrFist: boolean) {
+        if (!this.group.visible) return;
+        const center = new THREE.Vector3();
+        this.group.getWorldPosition(center);
+
+        if (isPinchingOrFist) {
+            if (!this.isGrabbed) {
+                if (handPos.distanceTo(center) < 0.35) {
+                    this.isGrabbed = true;
+                    this.grabOffset.copy(this.group.position).sub(handPos);
+                    this.audio.playGrab();
+                }
+            } else {
+                this.group.position.copy(handPos).add(this.grabOffset);
+            }
+        } else {
+            this.isGrabbed = false;
+        }
+    }
+
+    public handleClick(hitObj: THREE.Object3D, point?: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+
+        let cur: THREE.Object3D | null = hitObj;
+        while (cur) {
+            if (cur === this.closeMesh || cur.userData?.isObsClose) {
+                this.audio.playBlip();
+                this.hide();
+                return true;
+            }
+            if (cur === this.refreshBtn || cur.userData?.isObsRefresh) {
+                this.audio.playBlip();
+                this.renderTable();
+                return true;
+            }
+            if (cur === this.boardMesh || cur.userData?.isObservationPanel) {
+                if (point) {
+                    const localPt = this.boardMesh.worldToLocal(point.clone());
+                    if (localPt.x > 0.22 && localPt.y > 0.16) {
+                        this.audio.playBlip();
+                        this.hide();
+                        return true;
+                    }
+                    if (localPt.x > 0.15 && localPt.y > 0.16) {
+                        this.audio.playBlip();
+                        this.renderTable();
+                        return true;
+                    }
+                }
+                this.audio.playBlip();
+                this.renderTable();
+                return true;
+            }
+            cur = cur.parent;
+        }
+        return false;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  EXPANDED CONTENT 6: EXPERIMENTS DIRECTORY (TOPIC SELECTOR)
+// ─────────────────────────────────────────────────────────────
+
+export interface ExperimentTopic {
+    id: string;
+    name: string;
+    subject: string;
+    status: 'ACTIVE' | 'AVAILABLE' | 'PLANNED';
+    statusText: string;
+    description: string;
+    objectives: string[];
+    equipment: string[];
+    isAvailable: boolean;
+    url?: string;
+}
+
+export class ExperimentsExpanded {
+    public group: THREE.Group;
+    private audio: AudioEngine;
+    private closeMesh: THREE.Mesh;
+    private boardMesh: THREE.Mesh;
+    private canvas: HTMLCanvasElement;
+    private canvasTexture: THREE.CanvasTexture;
+
+    private isGrabbed = false;
+    private grabOffset = new THREE.Vector3();
+    private lastPokeTime = 0;
+
+    private selectedIndex = 0;
+    private confirmModal: 'restart' | 'switch_litmus' | null = null;
+    private onRestartCallback: (() => void) | null = null;
+
+    private readonly topics: ExperimentTopic[] = [
+        {
+            id: 'flame',
+            name: 'Flame Test: Metal Cations',
+            subject: 'Chemistry // Atomic Emission Spectroscopy',
+            status: 'ACTIVE',
+            statusText: 'ACTIVE WORKBENCH',
+            description: 'Observe characteristic flame emission wavelengths produced when metal salts are vaporized in a high-temperature Bunsen flame.',
+            objectives: [
+                '• Identify unknown alkali & alkaline earth metal ions via spectral emission lines.',
+                '• Understand Bohr atomic transitions: thermal energy excitation and photon emission ΔE = hc/λ.',
+                '• Practice aseptic laboratory techniques and platinum wire cleaning with 6M hydrochloric acid.'
+            ],
+            equipment: ['Bunsen Burner', 'Platinum Wire Loop', '6M HCl Beaker', '6 Mystery Metal Salts (LiCl, NaCl, KCl, CaCl₂, SrCl₂, CuSO₄)', '3D Lab Book'],
+            isAvailable: true
+        },
+        {
+            id: 'litmus',
+            name: 'Litmus Paper Acid-Base Test',
+            subject: 'Chemistry // Acid-Base Indicators',
+            status: 'AVAILABLE',
+            statusText: 'AVAILABLE IN PROJECT',
+            description: 'Examine chemical solutions using red and blue litmus test strips to determine acid-base properties and proton exchange equilibria.',
+            objectives: [
+                '• Differentiate acidic (pH < 7) and basic (pH > 7) solutions using colorimetric litmus indicators.',
+                '• Understand conjugate acid-base reactions and indicator chromophore structure changes.',
+                '• Classify unknown household and chemical reagents in a virtual wet laboratory.'
+            ],
+            equipment: ['Red Litmus Strips', 'Blue Litmus Strips', 'Liquid Pipette Dropper', 'Chemical Reagent Vials', 'Reaction Spot Plate'],
+            isAvailable: true,
+            url: './litmus.html'
+        },
+        {
+            id: 'titration',
+            name: 'Acid-Base Volumetric Titration',
+            subject: 'Chemistry // Quantitative Stoichiometry',
+            status: 'PLANNED',
+            statusText: '🔒 IN DEVELOPMENT',
+            description: 'Determine the exact molar concentration of an unknown hydrochloric acid solution using precision burette titration against standardized sodium hydroxide.',
+            objectives: [
+                '• Read burette volume with meniscus parallax correction to ±0.05 mL precision.',
+                '• Detect equivalence point pH transition using phenolphthalein indicator.',
+                '• Apply stoichiometric molar ratio equations to calculate unknown solution concentration.'
+            ],
+            equipment: ['50mL Precision Glass Burette', 'Erlenmeyer Flask', 'Magnetic Stirrer', 'Phenolphthalein Indicator', '0.100M Standardized NaOH Titrant'],
+            isAvailable: false
+        },
+        {
+            id: 'circuits',
+            name: "Ohm's Law & Circuit Lab",
+            subject: 'Physics // Electromagnetism & Circuits',
+            status: 'PLANNED',
+            statusText: '🔒 IN DEVELOPMENT',
+            description: 'Assemble complete electrical circuits with variable DC power supply, ammeter, voltmeter, and resistive components to verify Ohm’s Law (V = IR).',
+            objectives: [
+                '• Wire parallel and series resistor circuits using breadboard and test leads.',
+                '• Measure voltage drop and current flow simultaneously across varied resistance values.',
+                '• Plot voltage vs current graphs to determine circuit resistance slope.'
+            ],
+            equipment: ['Regulated DC Power Supply', 'Digital Multimeter / Ammeter', 'Precision Resistor Bank', 'Connecting Banana Leads', 'Voltmeter'],
+            isAvailable: false
+        },
+        {
+            id: 'microscopy',
+            name: 'Optical Cell Microscopy',
+            subject: 'Biology // Cytology & Cellular Structure',
+            status: 'PLANNED',
+            statusText: '🔒 IN DEVELOPMENT',
+            description: 'Prepare stained wet-mount glass slides and observe eukaryotic plant and animal cellular structures under high-power optical compound microscopy.',
+            objectives: [
+                '• Prepare stained thin-section specimen slides with coverslips without trapping air bubbles.',
+                '• Master coarse and fine focus adjustments across 10x, 40x, and 100x oil immersion objectives.',
+                '• Distinguish cell membranes, cell walls, nuclei, and chloroplasts in onion epidermis vs cheek cells.'
+            ],
+            equipment: ['Binocular Compound Microscope', 'Glass Slides & Coverslips', 'Methylene Blue & Iodine Stain', 'Specimen Forceps', 'Cellular Samples'],
+            isAvailable: false
+        }
+    ];
+
+    constructor(scene: THREE.Scene, audio: AudioEngine) {
+        this.audio = audio;
+        this.group = new THREE.Group();
+        this.group.name = 'ExperimentsExpanded';
+        this.group.visible = false;
+
+        // Titanium back chassis
+        const frameGeo = new THREE.BoxGeometry(0.71, 0.48, 0.008);
+        const frameMat = AssetMaterials.darkTitanium;
+        const frame = new THREE.Mesh(frameGeo, frameMat);
+        frame.position.z = -0.005;
+        this.group.add(frame);
+
+        // Cyan glowing border
+        const borderGeo = new THREE.BoxGeometry(0.716, 0.486, 0.004);
+        const borderMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true });
+        const border = new THREE.Mesh(borderGeo, borderMat);
+        border.position.z = -0.003;
+        this.group.add(border);
+
+        // Top grab bar
+        const grabBarGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.58, 16);
+        grabBarGeo.rotateZ(Math.PI / 2);
+        const grabBarMat = AssetMaterials.brushedSteel;
+        const grabBar = new THREE.Mesh(grabBarGeo, grabBarMat);
+        grabBar.position.set(0, 0.23, 0.005);
+        this.group.add(grabBar);
+
+        // High resolution Canvas for 2-column UI
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 1152;
+        this.canvas.height = 768;
+        this.canvasTexture = new THREE.CanvasTexture(this.canvas);
+        this.canvasTexture.colorSpace = THREE.SRGBColorSpace;
+
+        const boardGeo = new THREE.PlaneGeometry(0.69, 0.46);
+        const boardMat = new THREE.MeshBasicMaterial({ map: this.canvasTexture, transparent: true });
+        this.boardMesh = new THREE.Mesh(boardGeo, boardMat);
+        this.boardMesh.name = 'ExperimentsBoardMesh';
+        this.boardMesh.position.z = 0.002;
+        this.boardMesh.userData.isExperimentsPanel = true;
+        this.group.add(this.boardMesh);
+
+        // Close Button [X]
+        this.closeMesh = createCloseBtn();
+        this.closeMesh.position.set(0.325, 0.21, 0.008);
+        this.closeMesh.userData.isExpClose = true;
+        this.group.add(this.closeMesh);
+
+        scene.add(this.group);
+        this.renderDirectory();
+    }
+
+    public setOnRestartCallback(cb: () => void) {
+        this.onRestartCallback = cb;
+    }
+
+    private renderDirectory() {
+        const c = this.canvas.getContext('2d')!;
+        c.clearRect(0, 0, 1152, 768);
+
+        // Glassmorphic background
+        c.fillStyle = 'rgba(8, 14, 28, 0.96)';
+        c.beginPath();
+        c.roundRect(8, 8, 1136, 752, 18);
+        c.fill();
+
+        c.strokeStyle = '#38bdf8';
+        c.lineWidth = 3;
+        c.beginPath();
+        c.roundRect(8, 8, 1136, 752, 18);
+        c.stroke();
+
+        // Header Title
+        c.fillStyle = '#38bdf8';
+        c.font = 'bold 30px "Inter", system-ui, sans-serif';
+        c.textAlign = 'left';
+        c.fillText('🔬 LABVERSE // EXPERIMENT DIRECTORY', 36, 52);
+
+        c.fillStyle = '#94a3b8';
+        c.font = '16px "Inter", system-ui, sans-serif';
+        c.fillText('Virtual Science Curriculum • Select a topic to inspect or start laboratory session', 36, 80);
+
+        // Divider rule
+        c.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(36, 96);
+        c.lineTo(1116, 96);
+        c.stroke();
+
+        // Vertical column separator
+        c.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        c.beginPath();
+        c.moveTo(456, 108);
+        c.lineTo(456, 730);
+        c.stroke();
+
+        // LEFT COLUMN: TOPIC LIST
+        c.fillStyle = '#94a3b8';
+        c.font = 'bold 14px monospace';
+        c.fillText('CURRICULUM MODULES (5)', 36, 126);
+
+        this.topics.forEach((t, i) => {
+            const y = 142 + i * 114;
+            const isSelected = i === this.selectedIndex;
+
+            // Card background
+            if (isSelected) {
+                c.fillStyle = 'rgba(14, 116, 144, 0.35)';
+                c.beginPath();
+                c.roundRect(36, y, 400, 102, 12);
+                c.fill();
+                c.strokeStyle = '#38bdf8';
+                c.lineWidth = 2.5;
+                c.stroke();
+            } else {
+                c.fillStyle = 'rgba(15, 23, 42, 0.65)';
+                c.beginPath();
+                c.roundRect(36, y, 400, 102, 12);
+                c.fill();
+                c.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                c.lineWidth = 1;
+                c.stroke();
+            }
+
+            // Subject pill
+            c.fillStyle = t.status === 'ACTIVE' ? '#00ff88' : t.status === 'AVAILABLE' ? '#38bdf8' : '#64748b';
+            c.font = 'bold 11px monospace';
+            c.fillText(t.subject.toUpperCase(), 52, y + 26);
+
+            // Topic Name
+            c.fillStyle = isSelected ? '#ffffff' : '#e2e8f0';
+            c.font = isSelected ? 'bold 17px "Inter", sans-serif' : '16px "Inter", sans-serif';
+            c.fillText(t.name, 52, y + 54);
+
+            // Status Badge
+            if (t.status === 'ACTIVE') {
+                c.fillStyle = 'rgba(0, 255, 136, 0.16)';
+                c.beginPath();
+                c.roundRect(52, y + 66, 110, 24, 6);
+                c.fill();
+                c.strokeStyle = '#00ff88';
+                c.lineWidth = 1;
+                c.stroke();
+                c.fillStyle = '#00ff88';
+                c.font = 'bold 11px "Inter", sans-serif';
+                c.fillText('● ACTIVE NOW', 64, y + 82);
+            } else if (t.status === 'AVAILABLE') {
+                c.fillStyle = 'rgba(56, 189, 248, 0.16)';
+                c.beginPath();
+                c.roundRect(52, y + 66, 110, 24, 6);
+                c.fill();
+                c.strokeStyle = '#38bdf8';
+                c.lineWidth = 1;
+                c.stroke();
+                c.fillStyle = '#38bdf8';
+                c.font = 'bold 11px "Inter", sans-serif';
+                c.fillText('AVAILABLE ▶', 64, y + 82);
+            } else {
+                c.fillStyle = 'rgba(100, 116, 139, 0.14)';
+                c.beginPath();
+                c.roundRect(52, y + 66, 110, 24, 6);
+                c.fill();
+                c.strokeStyle = '#64748b';
+                c.lineWidth = 1;
+                c.stroke();
+                c.fillStyle = '#94a3b8';
+                c.font = 'bold 11px "Inter", sans-serif';
+                c.fillText('🔒 PLANNED', 64, y + 82);
+            }
+        });
+
+        // RIGHT COLUMN: TOPIC DETAILS
+        const sel = this.topics[this.selectedIndex];
+        c.fillStyle = sel.status === 'ACTIVE' ? '#00ff88' : sel.status === 'AVAILABLE' ? '#38bdf8' : '#94a3b8';
+        c.font = 'bold 13px monospace';
+        c.fillText(sel.subject.toUpperCase(), 480, 130);
+
+        c.fillStyle = '#ffffff';
+        c.font = 'bold 26px "Inter", sans-serif';
+        c.fillText(sel.name, 480, 168);
+
+        // Status banner
+        c.fillStyle = 'rgba(15, 30, 58, 0.85)';
+        c.beginPath();
+        c.roundRect(480, 186, 630, 36, 8);
+        c.fill();
+        c.strokeStyle = sel.status === 'ACTIVE' ? '#00ff88' : sel.status === 'AVAILABLE' ? '#38bdf8' : '#64748b';
+        c.lineWidth = 1;
+        c.stroke();
+
+        c.fillStyle = sel.status === 'ACTIVE' ? '#00ff88' : sel.status === 'AVAILABLE' ? '#38bdf8' : '#94a3b8';
+        c.font = 'bold 13px monospace';
+        c.fillText(`STATUS: ${sel.statusText}`, 498, 209);
+
+        // Description
+        c.fillStyle = '#94a3b8';
+        c.font = 'bold 14px monospace';
+        c.fillText('OVERVIEW', 480, 252);
+
+        c.fillStyle = '#e2e8f0';
+        c.font = '16px "Inter", sans-serif';
+        const descWords = sel.description.split(' ');
+        let curLine = '';
+        let lineY = 278;
+        descWords.forEach(w => {
+            const testLine = curLine ? `${curLine} ${w}` : w;
+            if (c.measureText(testLine).width > 620) {
+                c.fillText(curLine, 480, lineY);
+                curLine = w;
+                lineY += 26;
+            } else {
+                curLine = testLine;
+            }
+        });
+        if (curLine) c.fillText(curLine, 480, lineY);
+
+        // Learning Objectives
+        lineY += 36;
+        c.fillStyle = '#38bdf8';
+        c.font = 'bold 14px monospace';
+        c.fillText('LEARNING OBJECTIVES', 480, lineY);
+
+        lineY += 24;
+        c.fillStyle = '#cbd5e1';
+        c.font = '15px "Inter", sans-serif';
+        sel.objectives.forEach(obj => {
+            const objWords = obj.split(' ');
+            let objLine = '';
+            objWords.forEach(ow => {
+                const testObj = objLine ? `${objLine} ${ow}` : ow;
+                if (c.measureText(testObj).width > 620) {
+                    c.fillText(objLine, 480, lineY);
+                    objLine = '    ' + ow;
+                    lineY += 24;
+                } else {
+                    objLine = testObj;
+                }
+            });
+            if (objLine) {
+                c.fillText(objLine, 480, lineY);
+                lineY += 28;
+            }
+        });
+
+        // Action Buttons at Bottom Right
+        if (sel.id === 'flame') {
+            // Button 1: Resume Lab
+            c.fillStyle = '#0284c7';
+            c.beginPath();
+            c.roundRect(480, 672, 280, 52, 10);
+            c.fill();
+            c.strokeStyle = '#38bdf8';
+            c.lineWidth = 2;
+            c.stroke();
+
+            c.fillStyle = '#ffffff';
+            c.font = 'bold 16px "Inter", sans-serif';
+            c.textAlign = 'center';
+            c.fillText('RESUME WORKBENCH', 620, 704);
+
+            // Button 2: Restart Lab
+            c.fillStyle = 'rgba(239, 68, 68, 0.16)';
+            c.beginPath();
+            c.roundRect(780, 672, 280, 52, 10);
+            c.fill();
+            c.strokeStyle = '#ef4444';
+            c.lineWidth = 2;
+            c.stroke();
+
+            c.fillStyle = '#ef4444';
+            c.font = 'bold 16px "Inter", sans-serif';
+            c.fillText('RESTART EXPERIMENT ⟳', 920, 704);
+            c.textAlign = 'left';
+        } else if (sel.id === 'litmus') {
+            c.fillStyle = '#0284c7';
+            c.beginPath();
+            c.roundRect(480, 672, 400, 52, 10);
+            c.fill();
+            c.strokeStyle = '#38bdf8';
+            c.lineWidth = 2;
+            c.stroke();
+
+            c.fillStyle = '#ffffff';
+            c.font = 'bold 16px "Inter", sans-serif';
+            c.textAlign = 'center';
+            c.fillText('START LITMUS EXPERIMENT ▶', 680, 704);
+            c.textAlign = 'left';
+        } else {
+            // Planned experiments are locked
+            c.fillStyle = 'rgba(30, 41, 59, 0.7)';
+            c.beginPath();
+            c.roundRect(480, 672, 440, 52, 10);
+            c.fill();
+            c.strokeStyle = '#475569';
+            c.lineWidth = 1.5;
+            c.stroke();
+
+            c.fillStyle = '#94a3b8';
+            c.font = 'bold 15px "Inter", sans-serif';
+            c.textAlign = 'center';
+            c.fillText('🔒 LOCKED — PLANNED IN ROADMAP', 700, 704);
+            c.textAlign = 'left';
+        }
+
+        // CONFIRMATION MODAL OVERLAY
+        if (this.confirmModal) {
+            c.fillStyle = 'rgba(5, 10, 20, 0.88)';
+            c.fillRect(0, 0, 1152, 768);
+
+            // Modal card
+            c.fillStyle = 'rgba(15, 23, 42, 0.98)';
+            c.beginPath();
+            c.roundRect(326, 220, 500, 320, 16);
+            c.fill();
+
+            c.strokeStyle = this.confirmModal === 'restart' ? '#ef4444' : '#38bdf8';
+            c.lineWidth = 3;
+            c.stroke();
+
+            c.fillStyle = this.confirmModal === 'restart' ? '#ef4444' : '#38bdf8';
+            c.font = 'bold 24px "Inter", sans-serif';
+            c.textAlign = 'center';
+            c.fillText(this.confirmModal === 'restart' ? 'CONFIRM LAB RESTART' : 'CONFIRM TOPIC SWITCH', 576, 276);
+
+            c.fillStyle = '#cbd5e1';
+            c.font = '16px "Inter", sans-serif';
+            if (this.confirmModal === 'restart') {
+                c.fillText('Are you sure you want to restart the Flame Test?', 576, 330);
+                c.fillText('All collected observation data will be cleared.', 576, 360);
+                c.fillText('Your current Bunsen burner and tools will be reset.', 576, 390);
+            } else {
+                c.fillText('Switch to the Litmus Paper Acid-Base Experiment?', 576, 330);
+                c.fillText('You will be navigated to the Litmus laboratory session.', 576, 360);
+                c.fillText('Flame Test status will remain preserved in your history.', 576, 390);
+            }
+
+            // Confirm Button
+            c.fillStyle = this.confirmModal === 'restart' ? '#dc2626' : '#0284c7';
+            c.beginPath();
+            c.roundRect(360, 440, 200, 48, 8);
+            c.fill();
+            c.strokeStyle = this.confirmModal === 'restart' ? '#f87171' : '#38bdf8';
+            c.lineWidth = 2;
+            c.stroke();
+
+            c.fillStyle = '#ffffff';
+            c.font = 'bold 16px "Inter", sans-serif';
+            c.fillText(this.confirmModal === 'restart' ? 'RESTART NOW' : 'SWITCH LAB ▶', 460, 470);
+
+            // Cancel Button
+            c.fillStyle = '#334155';
+            c.beginPath();
+            c.roundRect(592, 440, 200, 48, 8);
+            c.fill();
+            c.strokeStyle = '#64748b';
+            c.lineWidth = 1.5;
+            c.stroke();
+
+            c.fillStyle = '#e2e8f0';
+            c.font = 'bold 16px "Inter", sans-serif';
+            c.fillText('CANCEL', 692, 470);
+            c.textAlign = 'left';
+        }
+
+        this.canvasTexture.needsUpdate = true;
+    }
+
+    public update(_delta: number) {}
+
+    public show(pos: THREE.Vector3, lookAtPos: THREE.Vector3) {
+        this.group.position.copy(pos);
+        this.group.lookAt(lookAtPos);
+        this.group.visible = true;
+        this.isGrabbed = false;
+        this.confirmModal = null;
+        this.renderDirectory();
+    }
+
+    public hide() {
+        this.group.visible = false;
+        this.isGrabbed = false;
+        this.confirmModal = null;
+    }
+
+    public isVisible() {
+        return this.group.visible;
+    }
+
+    public checkPoke(pokePos: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+        const now = Date.now();
+        if (now - this.lastPokeTime < 320) return false;
+
+        const closePos = new THREE.Vector3();
+        this.closeMesh.getWorldPosition(closePos);
+        if (pokePos.distanceTo(closePos) < 0.08) {
+            this.lastPokeTime = now;
+            this.audio.playBlip();
+            this.hide();
+            return true;
+        }
+
+        const localPt = this.boardMesh.worldToLocal(pokePos.clone());
+        if (Math.abs(localPt.x) <= 0.35 && Math.abs(localPt.y) <= 0.235) {
+            this.lastPokeTime = now;
+            const cx = ((localPt.x + 0.345) / 0.69) * 1152;
+            const cy = ((-localPt.y + 0.23) / 0.46) * 768;
+            return this.handleCanvasClick(cx, cy);
+        }
+
+        return false;
+    }
+
+    public checkGrab(handPos: THREE.Vector3, isPinchingOrFist: boolean) {
+        if (!this.group.visible) return;
+        const center = new THREE.Vector3();
+        this.group.getWorldPosition(center);
+
+        if (isPinchingOrFist) {
+            if (!this.isGrabbed) {
+                if (handPos.distanceTo(center) < 0.38) {
+                    this.isGrabbed = true;
+                    this.grabOffset.copy(this.group.position).sub(handPos);
+                    this.audio.playGrab();
+                }
+            } else {
+                this.group.position.copy(handPos).add(this.grabOffset);
+            }
+        } else {
+            this.isGrabbed = false;
+        }
+    }
+
+    public handleClick(hitObj: THREE.Object3D, point?: THREE.Vector3): boolean {
+        if (!this.group.visible) return false;
+
+        let cur: THREE.Object3D | null = hitObj;
+        while (cur) {
+            if (cur === this.closeMesh || cur.userData?.isExpClose) {
+                this.audio.playBlip();
+                this.hide();
+                return true;
+            }
+            if (cur === this.boardMesh || cur.userData?.isExperimentsPanel) {
+                if (point) {
+                    const localPt = this.boardMesh.worldToLocal(point.clone());
+                    const cx = ((localPt.x + 0.345) / 0.69) * 1152;
+                    const cy = ((-localPt.y + 0.23) / 0.46) * 768;
+                    return this.handleCanvasClick(cx, cy);
+                }
+                return true;
+            }
+            cur = cur.parent;
+        }
+        return false;
+    }
+
+    private handleCanvasClick(cx: number, cy: number): boolean {
+        this.audio.playBlip();
+
+        // 1. If Confirmation Modal is open
+        if (this.confirmModal) {
+            // Confirm button (360, 440, 200, 48)
+            if (cx >= 360 && cx <= 560 && cy >= 440 && cy <= 488) {
+                if (this.confirmModal === 'restart') {
+                    this.confirmModal = null;
+                    if (this.onRestartCallback) this.onRestartCallback();
+                    this.hide();
+                } else if (this.confirmModal === 'switch_litmus') {
+                    window.location.href = './litmus.html';
+                }
+                return true;
+            }
+            // Cancel button (592, 440, 200, 48)
+            if (cx >= 592 && cx <= 792 && cy >= 440 && cy <= 488) {
+                this.confirmModal = null;
+                this.renderDirectory();
+                return true;
+            }
+            return true;
+        }
+
+        // 2. Left column topic items
+        if (cx >= 36 && cx <= 436) {
+            for (let i = 0; i < this.topics.length; i++) {
+                const y = 142 + i * 114;
+                if (cy >= y && cy <= y + 102) {
+                    this.selectedIndex = i;
+                    this.renderDirectory();
+                    return true;
+                }
+            }
+        }
+
+        // 3. Right column actions
+        const sel = this.topics[this.selectedIndex];
+        if (sel.id === 'flame') {
+            // Resume (480, 672, 280, 52)
+            if (cx >= 480 && cx <= 760 && cy >= 672 && cy <= 724) {
+                this.hide();
+                return true;
+            }
+            // Restart (780, 672, 280, 52)
+            if (cx >= 780 && cx <= 1060 && cy >= 672 && cy <= 724) {
+                this.confirmModal = 'restart';
+                this.renderDirectory();
+                return true;
+            }
+        } else if (sel.id === 'litmus') {
+            // Start Litmus (480, 672, 400, 52)
+            if (cx >= 480 && cx <= 880 && cy >= 672 && cy <= 724) {
+                this.confirmModal = 'switch_litmus';
+                this.renderDirectory();
+                return true;
+            }
+        }
+
+        return true;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2136,18 +3436,23 @@ export class PalmMenu {
     private palmGroup: THREE.Group;
     private menuItems: MenuItem[] = [];
     private isPalmOpen = false;
-    private palmStabilityCounter = 0;
-    private readonly OPEN_FRAMES = 4;
-    private readonly CLOSE_FRAMES = 3;
-    private closeCounter = 0;
-
     private lastPokeTime = 0;
 
-    // Expanded 3D Panels
+    // 3D Wrist Button Elements
+    public wristButton: THREE.Group;
+    private isWristLooking = false;
+    private wristLookCounter = 0;
+    private wristAwayCounter = 0;
+    private wristBtnScale = 0;
+    private closeMesh!: THREE.Mesh;
+
+    // Expanded 3D Panels (6 Options)
     public stepsExp: StepsExpanded;
     public guideExp: GuideExpanded;
     public bookExp: BookExpanded;
     public videoExp: VideoExpanded;
+    public obsExp: ObservationExpanded;
+    public expExp: ExperimentsExpanded;
 
     private scaleAnim = 0;
     private animTime = 0;
@@ -2157,27 +3462,85 @@ export class PalmMenu {
         this.world = world;
         this.audio = audio;
 
-        // Build compact palm group
+        // Build 3D wrist button
+        this.wristButton = buildWristButtonMesh();
+        this.wristButton.visible = false;
+        this.wristButton.scale.set(0, 0, 0);
+        this.scene.add(this.wristButton);
+
+        // Build compact wrist holographic menu group
         this.palmGroup = new THREE.Group();
         this.palmGroup.name = 'PalmMenuCompact';
         this.palmGroup.visible = false;
         this.scene.add(this.palmGroup);
 
-        // Build expanded content objects
+        // Build expanded 3D panels
         this.stepsExp = new StepsExpanded(scene, audio);
         this.guideExp = new GuideExpanded(scene, audio);
         this.bookExp = new BookExpanded(scene, audio);
         this.videoExp = new VideoExpanded(scene, audio);
+        this.obsExp = new ObservationExpanded(scene, audio);
+        this.expExp = new ExperimentsExpanded(scene, audio);
 
         this.buildCompactItems();
     }
 
+    public setOnRestartCallback(cb: () => void) {
+        this.expExp.setOnRestartCallback(cb);
+    }
+
+    public setObservations(obs: Map<string, any>) {
+        this.obsExp.setObservations(obs);
+    }
+
     private buildCompactItems() {
+        // Holographic Backing Plaque (Translucent sci-fi frosted glass)
+        const plaqueGeo = new THREE.PlaneGeometry(0.24, 0.27);
+        const plaqueMat = new THREE.MeshPhysicalMaterial({
+            color: 0x060f1e,
+            transmission: 0.85,
+            roughness: 0.22,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.88,
+            side: THREE.DoubleSide
+        });
+        const plaque = new THREE.Mesh(plaqueGeo, plaqueMat);
+        plaque.name = 'WristMenuBackPlaque';
+        plaque.userData.isWristMenuBacking = true;
+        this.palmGroup.add(plaque);
+
+        // Cybernetic rim border
+        const borderGeo = new THREE.BoxGeometry(0.244, 0.274, 0.003);
+        const borderMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true });
+        const border = new THREE.Mesh(borderGeo, borderMat);
+        border.position.z = -0.002;
+        this.palmGroup.add(border);
+
+        // Title Header Banner
+        const titleSpr = labelSprite('LABVERSE // 3D MENU', '#00e5ff');
+        titleSpr.scale.set(0.14, 0.024, 1);
+        titleSpr.position.set(-0.025, 0.115, 0.005);
+        this.palmGroup.add(titleSpr);
+
+        // Close Button [X] at top-right of wrist menu plaque
+        this.closeMesh = createCloseBtn();
+        this.closeMesh.scale.setScalar(0.75);
+        this.closeMesh.position.set(0.096, 0.115, 0.006);
+        this.closeMesh.userData.isPalmClose = true;
+        this.palmGroup.add(this.closeMesh);
+
+        // 6 Options Grid (2 columns x 3 rows)
         const items: { tag: MenuItemTag; iconFn: () => THREE.Group; label: string; color: string; offset: THREE.Vector3 }[] = [
-            { tag: 'steps', iconFn: buildCylinderIcon, label: 'STEPS', color: '#00e5ff', offset: new THREE.Vector3(-0.055, 0.055, 0) },
-            { tag: 'guide', iconFn: buildHandIcon,     label: 'GUIDE', color: '#00ff88', offset: new THREE.Vector3(0.055, 0.055, 0) },
-            { tag: 'theory', iconFn: buildBookIcon,    label: 'THEORY', color: '#d4af37', offset: new THREE.Vector3(-0.055, 0.01, 0) },
-            { tag: 'video',  iconFn: buildSphereIcon,  label: 'VIDEO',  color: '#aa88ff', offset: new THREE.Vector3(0.055, 0.01, 0) },
+            // Row 1 (y = +0.058)
+            { tag: 'steps',        iconFn: buildCylinderIcon,    label: '1. STEPS',    color: '#00e5ff', offset: new THREE.Vector3(-0.055, 0.058, 0.006) },
+            { tag: 'guide',        iconFn: buildHandIcon,        label: '2. GUIDE',    color: '#00ff88', offset: new THREE.Vector3(0.055, 0.058, 0.006) },
+            // Row 2 (y = -0.002)
+            { tag: 'theory',       iconFn: buildBookIcon,        label: '3. THEORY',   color: '#d4af37', offset: new THREE.Vector3(-0.055, -0.002, 0.006) },
+            { tag: 'video',        iconFn: buildSphereIcon,      label: '4. VIDEO',    color: '#aa88ff', offset: new THREE.Vector3(0.055, -0.002, 0.006) },
+            // Row 3 (y = -0.062)
+            { tag: 'observations', iconFn: buildObservationIcon, label: '5. OBSERVE',  color: '#f59e0b', offset: new THREE.Vector3(-0.055, -0.062, 0.006) },
+            { tag: 'experiments',  iconFn: buildExperimentsIcon, label: '6. TOPICS',   color: '#38bdf8', offset: new THREE.Vector3(0.055, -0.062, 0.006) },
         ];
 
         items.forEach(({ tag, iconFn, label, color, offset }) => {
@@ -2185,150 +3548,163 @@ export class PalmMenu {
             iconGroup.position.copy(offset);
             iconGroup.name = `PalmIcon_${tag}`;
             iconGroup.userData.palmTag = tag;
+            iconGroup.userData.isPalmIcon = true;
             this.palmGroup.add(iconGroup);
 
             const spr = labelSprite(label, color);
-            spr.position.copy(offset).add(new THREE.Vector3(0, -0.026, 0));
+            spr.position.copy(offset).add(new THREE.Vector3(0, -0.024, 0.002));
             this.palmGroup.add(spr);
 
             this.menuItems.push({ tag, group: iconGroup, label: spr });
         });
     }
 
-        // Scratch vectors for zero-allocation per-frame tracking
+    // Scratch vectors for zero GC per-frame allocations
     private static _scratchWPos = new THREE.Vector3();
-    private static _scratchIdxPos = new THREE.Vector3();
-    private static _scratchMidPos = new THREE.Vector3();
-    private static _scratchPkyPos = new THREE.Vector3();
-    private static _scratchMkPos = new THREE.Vector3();
-    private static _scratchIkPos = new THREE.Vector3();
-    private static _scratchPkPos = new THREE.Vector3();
+    private static _scratchWQuat = new THREE.Quaternion();
     private static _scratchCamPos = new THREE.Vector3();
-    private static _scratchToCam = new THREE.Vector3();
+    private static _scratchCamDir = new THREE.Vector3();
+    private static _scratchToWrist = new THREE.Vector3();
     private static _scratchTargetPos = new THREE.Vector3();
+    private static _scratchRightIdxPos = new THREE.Vector3();
 
     public update(delta: number) {
         this.animTime += delta;
 
-        // Update expanded content animations
+        // Update all 6 expanded content animations
         this.stepsExp.update(delta);
         this.guideExp.update(delta);
         this.bookExp.update(delta);
         this.videoExp.update(delta);
+        this.obsExp.update(delta);
+        this.expExp.update(delta);
 
         const renderer = (this.world as any).renderer;
         if (!renderer?.xr?.isPresenting) {
             return;
         }
 
-        let anchorPalmCenter: THREE.Vector3 | null = null;
-        let anchorPalmNormal: THREE.Vector3 | null = null;
-        let isOpenAndRaised = false;
-        let activeInteractingHand: any = null;
+        // 1. VR Hand Tracking: Left Wrist Detection
+        let leftWristFound = false;
+        const leftWristPos = PalmMenu._scratchWPos;
+        const leftWristQuat = PalmMenu._scratchWQuat;
 
-        // 1. Process both hands to detect open palm on either hand
+        // Iterate hands to find left hand (handedness === 'left' or index 0)
         for (let h = 0; h < 2; h++) {
             const hand = renderer.xr.getHand ? renderer.xr.getHand(h) : null;
             if (!hand || !(hand as any).joints) continue;
 
+            const handedness = (hand as any).handedness;
+            const isLeft = handedness === 'left' || (handedness !== 'right' && h === 0);
+            if (!isLeft) continue;
+
             const joints = (hand as any).joints;
             const wrist = joints['wrist'] || joints[0];
-            const idxTip = joints['index-finger-tip'] || joints[9] || joints[8];
-            const midTip = joints['middle-finger-tip'] || joints[14];
-            const pkyTip = joints['pinky-finger-tip'] || joints[24];
-
-            const midKnuckle = joints['middle-finger-metacarpal'] || joints['middle-finger-phalanx-proximal'] || joints[11];
-            const idxKnuckle = joints['index-finger-metacarpal'] || joints['index-finger-phalanx-proximal'] || joints[6];
-            const pkyKnuckle = joints['pinky-finger-metacarpal'] || joints['pinky-finger-phalanx-proximal'] || joints[21];
-
             if (wrist) {
-                const wPos = PalmMenu._scratchWPos;
-                wrist.getWorldPosition(wPos);
-
-                if (wPos.lengthSq() > 0.01 && wPos.y > 0.60) {
-                    const idxPos = PalmMenu._scratchIdxPos;
-                    const midPos = PalmMenu._scratchMidPos;
-                    const pkyPos = PalmMenu._scratchPkyPos;
-
-                    if (idxTip) idxTip.getWorldPosition(idxPos); else idxPos.set(0, 0, 0);
-                    if (midTip) midTip.getWorldPosition(midPos); else midPos.set(0, 0, 0);
-                    if (pkyTip) pkyTip.getWorldPosition(pkyPos); else pkyPos.set(0, 0, 0);
-
-                    const dIdx = idxPos.lengthSq() > 0.01 ? wPos.distanceTo(idxPos) : 0.11;
-                    const dMid = midPos.lengthSq() > 0.01 ? wPos.distanceTo(midPos) : 0.11;
-                    const dPky = pkyPos.lengthSq() > 0.01 ? wPos.distanceTo(pkyPos) : 0.09;
-
-                    // Anatomical threshold: > 7.5cm for natural, unstrained open palm
-                    const fingersExtended = dIdx > 0.075 && dMid > 0.075 && dPky > 0.070;
-
-                    const mkPos = PalmMenu._scratchMkPos;
-                    const ikPos = PalmMenu._scratchIkPos;
-                    const pkPos = PalmMenu._scratchPkPos;
-
-                    if (midKnuckle) midKnuckle.getWorldPosition(mkPos); else mkPos.copy(midPos);
-                    if (idxKnuckle) idxKnuckle.getWorldPosition(ikPos); else ikPos.copy(idxPos);
-                    if (pkyKnuckle) pkyKnuckle.getWorldPosition(pkPos); else pkPos.copy(pkyPos);
-
-                    const palmCenter = wPos.clone().add(mkPos).multiplyScalar(0.5);
-                    const vForward = mkPos.clone().sub(wPos).normalize();
-                    const vAcross = pkPos.clone().sub(ikPos).normalize();
-                    const palmNormal = new THREE.Vector3().crossVectors(vAcross, vForward).normalize();
-
-                    const camPos = PalmMenu._scratchCamPos;
-                    if (this.world.camera) (this.world.camera as any).getWorldPosition(camPos);
-                    const toCam = PalmMenu._scratchToCam.copy(camPos).sub(palmCenter).normalize();
-
-                    const palmFacingUpOrCam = palmNormal.y > 0.12 || palmNormal.dot(toCam) > 0.20;
-
-                    if (fingersExtended && palmFacingUpOrCam) {
-                        isOpenAndRaised = true;
-                        anchorPalmCenter = palmCenter;
-                        anchorPalmNormal = palmNormal;
-                        activeInteractingHand = renderer.xr.getHand ? renderer.xr.getHand(1 - h) : null;
-                        break;
-                    }
+                wrist.getWorldPosition(leftWristPos);
+                wrist.getWorldQuaternion(leftWristQuat);
+                if (leftWristPos.lengthSq() > 0.01) {
+                    leftWristFound = true;
+                    break;
                 }
             }
         }
 
-        // 2. Process Interacting Hand for Finger Poke & Grabbing
-        let interactingTipPos: THREE.Vector3 | null = null;
-        let interactingPinchingOrFist = false;
+        // 2. Gaze Detection: Is the student looking at their left wrist?
+        const camPos = PalmMenu._scratchCamPos;
+        const camDir = PalmMenu._scratchCamDir;
+        if (this.world.camera) {
+            (this.world.camera as any).getWorldPosition(camPos);
+            (this.world.camera as any).getWorldDirection(camDir);
+        }
 
-        const pokeHand = activeInteractingHand || (renderer.xr.getHand ? renderer.xr.getHand(1) : null);
-        if (pokeHand && (pokeHand as any).joints) {
-            const joints = (pokeHand as any).joints;
-            const rIdxTip = joints['index-finger-tip'] || joints[9] || joints[8];
-            const rThumbTip = joints['thumb-tip'] || joints[4];
-            const rWrist = joints['wrist'] || joints[0];
+        let isLookingAtWristNow = false;
+        if (leftWristFound) {
+            const toWrist = PalmMenu._scratchToWrist.copy(leftWristPos).sub(camPos);
+            const dist = toWrist.length();
+            toWrist.normalize();
 
-            if (rIdxTip) {
-                const pos = new THREE.Vector3();
-                rIdxTip.getWorldPosition(pos);
+            const gazeDot = camDir.dot(toWrist);
+            // Gaze cone: dot > 0.68 (~47°), comfortable distance 0.15m-0.75m, wrist raised above y = 0.55m
+            if (gazeDot > 0.68 && dist >= 0.15 && dist <= 0.75 && leftWristPos.y > 0.55) {
+                isLookingAtWristNow = true;
+            }
+        }
+
+        // Hysteresis Filter: Prevents flickering from micro-movements
+        if (isLookingAtWristNow) {
+            this.wristLookCounter = Math.min(6, this.wristLookCounter + 1);
+            this.wristAwayCounter = 0;
+            if (this.wristLookCounter >= 3) {
+                this.isWristLooking = true;
+            }
+        } else {
+            this.wristAwayCounter = Math.min(20, this.wristAwayCounter + 1);
+            if (this.wristAwayCounter >= 12) {
+                this.wristLookCounter = Math.max(0, this.wristLookCounter - 1);
+                if (this.wristLookCounter <= 1) {
+                    this.isWristLooking = false;
+                }
+            }
+        }
+
+        // 3. Wrist Button Visibility & Positioning
+        const targetBtnScale = this.isWristLooking ? 1.0 : 0.0;
+        this.wristBtnScale = THREE.MathUtils.lerp(this.wristBtnScale, targetBtnScale, 0.22);
+        this.wristButton.scale.setScalar(this.wristBtnScale);
+        this.wristButton.visible = this.wristBtnScale > 0.02;
+
+        if (leftWristFound && this.wristButton.visible) {
+            // Position on dorsal surface of left wrist (~0.024m offset)
+            const dorsalOffset = new THREE.Vector3(0, 0.024, 0).applyQuaternion(leftWristQuat);
+            this.wristButton.position.copy(leftWristPos).add(dorsalOffset);
+            this.wristButton.lookAt(camPos);
+        }
+
+        // 4. Right Hand Fingertip Tracking for Wrist Button & Menu Interaction
+        let rightIndexTipPos: THREE.Vector3 | null = null;
+        let rightPinchingOrFist = false;
+
+        for (let h = 0; h < 2; h++) {
+            const hand = renderer.xr.getHand ? renderer.xr.getHand(h) : null;
+            if (!hand || !(hand as any).joints) continue;
+
+            const handedness = (hand as any).handedness;
+            const isRight = handedness === 'right' || (handedness !== 'left' && h === 1);
+            if (!isRight) continue;
+
+            const joints = (hand as any).joints;
+            const idxTip = joints['index-finger-tip'] || joints[9] || joints[8];
+            const thumbTip = joints['thumb-tip'] || joints[4];
+            const wrist = joints['wrist'] || joints[0];
+
+            if (idxTip) {
+                const pos = PalmMenu._scratchRightIdxPos;
+                idxTip.getWorldPosition(pos);
                 if (pos.lengthSq() > 0.01) {
-                    interactingTipPos = pos;
+                    rightIndexTipPos = pos;
                 }
             }
 
-            if (rThumbTip && interactingTipPos) {
-                const thumbPos = new THREE.Vector3();
-                rThumbTip.getWorldPosition(thumbPos);
-                if (thumbPos.distanceTo(interactingTipPos) < 0.05) {
-                    interactingPinchingOrFist = true;
+            if (rightIndexTipPos && thumbTip) {
+                const tPos = new THREE.Vector3();
+                thumbTip.getWorldPosition(tPos);
+                if (tPos.distanceTo(rightIndexTipPos) < 0.05) {
+                    rightPinchingOrFist = true;
                 }
             }
-
-            if (rWrist && interactingTipPos) {
+            if (rightIndexTipPos && wrist) {
                 const wPos = new THREE.Vector3();
-                rWrist.getWorldPosition(wPos);
-                if (interactingTipPos.distanceTo(wPos) < 0.10) {
-                    interactingPinchingOrFist = true;
+                wrist.getWorldPosition(wPos);
+                if (rightIndexTipPos.distanceTo(wPos) < 0.10) {
+                    rightPinchingOrFist = true;
                 }
             }
+            break;
         }
 
-        // Fallback for VR controllers if joints are not available
-        if (!interactingTipPos) {
+        // Fallback for VR controller pointer if finger joints are not present
+        if (!rightIndexTipPos) {
             for (let c = 0; c < 2; c++) {
                 const ctrl = renderer.xr.getController ? renderer.xr.getController(c) : null;
                 if (ctrl && ctrl.position.lengthSq() > 0.01) {
@@ -2337,42 +3713,55 @@ export class PalmMenu {
                     const ctrlQuat = new THREE.Quaternion();
                     ctrl.getWorldPosition(ctrlPos);
                     ctrl.getWorldQuaternion(ctrlQuat);
-                    interactingTipPos = ctrlPos.clone().add(new THREE.Vector3(0, 0, -0.10).applyQuaternion(ctrlQuat));
+                    rightIndexTipPos = ctrlPos.add(new THREE.Vector3(0, 0, -0.08).applyQuaternion(ctrlQuat));
                     break;
                 }
             }
         }
 
-        // 3. Palm Menu Open / Close Stability State Machine
-        if (isOpenAndRaised) {
-            this.palmStabilityCounter = Math.min(this.OPEN_FRAMES, this.palmStabilityCounter + 1);
-            this.closeCounter = 0;
-        } else {
-            this.closeCounter = Math.min(this.CLOSE_FRAMES, this.closeCounter + 1);
-            if (this.closeCounter >= this.CLOSE_FRAMES) {
-                this.palmStabilityCounter = 0;
+        // 5. Right Fingertip Poke on 3D Wrist Button -> Toggle Menu
+        if (rightIndexTipPos && this.wristButton.visible) {
+            const now = Date.now();
+            if (now - this.lastPokeTime > 350) {
+                const btnPos = new THREE.Vector3();
+                this.wristButton.getWorldPosition(btnPos);
+                if (rightIndexTipPos.distanceTo(btnPos) < 0.048) {
+                    this.lastPokeTime = now;
+                    this.audio.playBlip();
+                    this.toggleOpen();
+                }
             }
         }
 
-        if (this.palmStabilityCounter >= this.OPEN_FRAMES) {
-            if (!this.isPalmOpen) this.openPalmMenu();
-        } else if (this.closeCounter >= this.CLOSE_FRAMES && this.isPalmOpen) {
-            this.closePalmMenu();
+        // 6. Anchor Floating Holographic Menu to Left Wrist
+        if (this.isPalmOpen && leftWristFound) {
+            const dorsalOffset = new THREE.Vector3(0, 0.095, 0).applyQuaternion(leftWristQuat);
+            const targetMenuPos = PalmMenu._scratchTargetPos.copy(leftWristPos).add(dorsalOffset);
+            this.palmGroup.position.lerp(targetMenuPos, 0.25);
+            this.palmGroup.lookAt(camPos);
         }
 
-        // 4. Anchor Palm Menu above Active Palm
-        if (this.isPalmOpen && anchorPalmCenter && anchorPalmNormal) {
-            const targetPos = PalmMenu._scratchTargetPos.copy(anchorPalmCenter).addScaledVector(anchorPalmNormal, 0.08);
-            this.palmGroup.position.lerp(targetPos, 0.28);
+        // Auto-Collapse when looking away from wrist (unless an expanded panel is active or interacting)
+        const isAnyPanelVisible = this.stepsExp.isVisible() || this.guideExp.isVisible() ||
+                                  this.bookExp.isVisible() || this.videoExp.isVisible() ||
+                                  this.obsExp.isVisible() || this.expExp.isVisible();
 
-            if (this.world.camera) {
-                const camPos = PalmMenu._scratchCamPos;
-                (this.world.camera as any).getWorldPosition(camPos);
-                this.palmGroup.lookAt(camPos);
+        let isInteractingWithMenu = false;
+        if (rightIndexTipPos && this.palmGroup.visible) {
+            const menuCenter = new THREE.Vector3();
+            this.palmGroup.getWorldPosition(menuCenter);
+            if (rightIndexTipPos.distanceTo(menuCenter) < 0.22) {
+                isInteractingWithMenu = true;
             }
         }
 
-        // Scale animation
+        if (this.isPalmOpen && !this.isWristLooking && !isAnyPanelVisible && !isInteractingWithMenu) {
+            if (this.wristAwayCounter >= 16) {
+                this.closePalmMenu();
+            }
+        }
+
+        // Menu scale animation
         const targetScale = this.isPalmOpen ? 1.0 : 0.0;
         this.scaleAnim = THREE.MathUtils.lerp(this.scaleAnim, targetScale, 0.22);
         this.palmGroup.scale.setScalar(this.scaleAnim);
@@ -2381,25 +3770,29 @@ export class PalmMenu {
         // Hover bob animations for compact icons
         if (this.isPalmOpen) {
             this.menuItems.forEach((item, i) => {
-                item.group.rotation.y = this.animTime * 0.8 + i * (Math.PI / 2);
+                item.group.rotation.y = this.animTime * 0.8 + i * (Math.PI / 3);
             });
         }
 
-        // 5. Interacting Hand Finger Poke Interactions
-        if (interactingTipPos) {
+        // 7. Process Finger Poke & Grabbing on Menu and All 6 Expanded Panels
+        if (rightIndexTipPos) {
             if (this.isPalmOpen && this.palmGroup.visible) {
-                this.checkCompactPoke(interactingTipPos);
+                this.checkCompactPoke(rightIndexTipPos);
             }
-            this.stepsExp.checkPoke(interactingTipPos);
-            this.guideExp.checkPoke(interactingTipPos);
-            this.bookExp.checkPoke(interactingTipPos);
-            this.videoExp.checkPoke(interactingTipPos);
+            this.stepsExp.checkPoke(rightIndexTipPos);
+            this.guideExp.checkPoke(rightIndexTipPos);
+            this.bookExp.checkPoke(rightIndexTipPos);
+            this.videoExp.checkPoke(rightIndexTipPos);
+            this.obsExp.checkPoke(rightIndexTipPos);
+            this.expExp.checkPoke(rightIndexTipPos);
 
-            // 6. Hand Grab & Repositioning for expanded 3D panels
-            this.stepsExp.checkGrab(interactingTipPos, interactingPinchingOrFist);
-            this.guideExp.checkGrab(interactingTipPos, interactingPinchingOrFist);
-            this.bookExp.checkGrab(interactingTipPos, interactingPinchingOrFist);
-            this.videoExp.checkGrab(interactingTipPos, interactingPinchingOrFist);
+            // Hand grab and repositioning for 3D panels
+            this.stepsExp.checkGrab(rightIndexTipPos, rightPinchingOrFist);
+            this.guideExp.checkGrab(rightIndexTipPos, rightPinchingOrFist);
+            this.bookExp.checkGrab(rightIndexTipPos, rightPinchingOrFist);
+            this.videoExp.checkGrab(rightIndexTipPos, rightPinchingOrFist);
+            this.obsExp.checkGrab(rightIndexTipPos, rightPinchingOrFist);
+            this.expExp.checkGrab(rightIndexTipPos, rightPinchingOrFist);
         }
     }
 
@@ -2407,10 +3800,21 @@ export class PalmMenu {
         const now = Date.now();
         if (now - this.lastPokeTime < 350) return;
 
+        // Check close button [X]
+        const closePos = new THREE.Vector3();
+        this.closeMesh.getWorldPosition(closePos);
+        if (pokePos.distanceTo(closePos) < 0.045) {
+            this.lastPokeTime = now;
+            this.audio.playBlip();
+            this.closePalmMenu();
+            return;
+        }
+
+        // Check 6 menu items
         for (const item of this.menuItems) {
             const iPos = new THREE.Vector3();
             item.group.getWorldPosition(iPos);
-            if (pokePos.distanceTo(iPos) < 0.075) {
+            if (pokePos.distanceTo(iPos) < 0.055) {
                 this.lastPokeTime = now;
                 this.audio.playBlip();
                 this.openExpanded(item.tag);
@@ -2422,7 +3826,7 @@ export class PalmMenu {
     public openExpanded(tag: MenuItemTag) {
         this.closeAllExpanded();
 
-        // Position comfortably in front of VR camera at arm reach (0.55m)
+        // Position comfortably in front of student at arm reach (~0.55m)
         const camPos = new THREE.Vector3();
         const camDir = new THREE.Vector3();
         if (this.world.camera) {
@@ -2434,10 +3838,12 @@ export class PalmMenu {
         targetPos.y = Math.max(1.15, Math.min(1.45, targetPos.y));
 
         switch (tag) {
-            case 'steps': this.stepsExp.show(targetPos, camPos); break;
-            case 'guide': this.guideExp.show(targetPos, camPos); break;
-            case 'theory': this.bookExp.show(targetPos, camPos); break;
-            case 'video':  this.videoExp.show(targetPos, camPos); break;
+            case 'steps':        this.stepsExp.show(targetPos, camPos); break;
+            case 'guide':        this.guideExp.show(targetPos, camPos); break;
+            case 'theory':       this.bookExp.show(targetPos, camPos); break;
+            case 'video':        this.videoExp.show(targetPos, camPos); break;
+            case 'observations': this.obsExp.show(targetPos, camPos); break;
+            case 'experiments':  this.expExp.show(targetPos, camPos); break;
         }
     }
 
@@ -2446,6 +3852,8 @@ export class PalmMenu {
         this.guideExp.hide();
         this.bookExp.hide();
         this.videoExp.hide();
+        this.obsExp.hide();
+        this.expExp.hide();
     }
 
     private openPalmMenu() {
@@ -2463,7 +3871,6 @@ export class PalmMenu {
     public toggleOpen() {
         if (this.isPalmOpen) {
             this.closePalmMenu();
-            this.closeAllExpanded();
         } else {
             this.openPalmMenu();
             this.scaleAnim = 1.0;
@@ -2474,7 +3881,7 @@ export class PalmMenu {
                 (this.world.camera as any).getWorldPosition(camPos);
                 (this.world.camera as any).getWorldDirection(camDir);
                 const pos = camPos.clone().add(camDir.multiplyScalar(0.5));
-                pos.y -= 0.1;
+                pos.y -= 0.08;
                 this.palmGroup.position.copy(pos);
                 this.palmGroup.lookAt(camPos);
             }
@@ -2485,20 +3892,43 @@ export class PalmMenu {
         return this.palmGroup;
     }
 
-    public checkPokeAndInteract(pokePos: THREE.Vector3, _isTouching: boolean): boolean {
+    public checkPokeAndInteract(pokePos: THREE.Vector3, _isTouching: boolean = true): boolean {
         let hit = false;
         hit = hit || this.stepsExp.checkPoke(pokePos);
         hit = hit || this.guideExp.checkPoke(pokePos);
         hit = hit || this.bookExp.checkPoke(pokePos);
         hit = hit || this.videoExp.checkPoke(pokePos);
+        hit = hit || this.obsExp.checkPoke(pokePos);
+        hit = hit || this.expExp.checkPoke(pokePos);
 
+        // Check wrist button poke
+        if (!hit && this.wristButton.visible) {
+            const btnPos = new THREE.Vector3();
+            this.wristButton.getWorldPosition(btnPos);
+            if (pokePos.distanceTo(btnPos) < 0.048) {
+                this.audio.playBlip();
+                this.toggleOpen();
+                return true;
+            }
+        }
+
+        // Check compact wrist menu poke
         if (!hit && this.isPalmOpen && this.palmGroup.visible) {
             const now = Date.now();
-            if (now - this.lastPokeTime > 350) {
+            if (now - this.lastPokeTime > 320) {
+                const closePos = new THREE.Vector3();
+                this.closeMesh.getWorldPosition(closePos);
+                if (pokePos.distanceTo(closePos) < 0.045) {
+                    this.lastPokeTime = now;
+                    this.audio.playBlip();
+                    this.closePalmMenu();
+                    return true;
+                }
+
                 for (const item of this.menuItems) {
                     const iPos = new THREE.Vector3();
                     item.group.getWorldPosition(iPos);
-                    if (pokePos.distanceTo(iPos) < 0.075) {
+                    if (pokePos.distanceTo(iPos) < 0.055) {
                         this.lastPokeTime = now;
                         this.audio.playBlip();
                         this.openExpanded(item.tag);
@@ -2509,5 +3939,38 @@ export class PalmMenu {
             }
         }
         return hit;
+    }
+
+    public handleClick(hitObj: THREE.Object3D, point?: THREE.Vector3): boolean {
+        // 1. Check expanded panels
+        if (this.stepsExp.isVisible() && this.stepsExp.handleClick(hitObj, point)) return true;
+        if (this.guideExp.isVisible() && this.guideExp.handleClick(hitObj, point)) return true;
+        if (this.bookExp.isVisible() && this.bookExp.handleClick(hitObj, point)) return true;
+        if (this.videoExp.isVisible() && this.videoExp.handleClick(hitObj, point)) return true;
+        if (this.obsExp.isVisible() && this.obsExp.handleClick(hitObj, point)) return true;
+        if (this.expExp.isVisible() && this.expExp.handleClick(hitObj, point)) return true;
+
+        // 2. Check wrist button click
+        let cur: THREE.Object3D | null = hitObj;
+        while (cur) {
+            if (cur === this.wristButton || cur.userData?.isWristButton || cur.name === 'WristButtonMeshGroup') {
+                this.audio.playBlip();
+                this.toggleOpen();
+                return true;
+            }
+            if (cur === this.closeMesh || cur.userData?.isPalmClose) {
+                this.audio.playBlip();
+                this.closePalmMenu();
+                return true;
+            }
+            if (cur.userData?.palmTag) {
+                this.audio.playBlip();
+                this.openExpanded(cur.userData.palmTag);
+                return true;
+            }
+            cur = cur.parent;
+        }
+
+        return false;
     }
 }

@@ -80,6 +80,10 @@ export class LabBook3D {
         return this.observations.has(letter);
     }
 
+    public getObservations(): Map<string, SaltObservationData> {
+        return this.observations;
+    }
+
     // --- 1. EXECUTIVE LEATHER DESK BLOTTER ---
     private buildDeskBlotterAndCradle() {
         this.deskBlotterGroup = new THREE.Group();
