@@ -3967,8 +3967,6 @@ export class PalmMenu {
                 // 1:1 PHYSICAL ANCHORING (Glued to wrist, rotating with wrist like a real watch)
                 this.wristButton.position.copy(targetWatchPos);
                 this.wristButton.quaternion.copy(watchQuat);
-                this.wristButton.scale.set(1, 1, 1);
-                this.wristButton.visible = true;
 
                 // 4. Gaze & Glance Detection (Smartwatch Wake-up)
                 const toWrist = PalmMenu._scratchToWrist.copy(targetWatchPos).sub(camPos);
@@ -3978,17 +3976,18 @@ export class PalmMenu {
                 const gazeDot = camDir.dot(toWrist); // Head oriented toward wrist
                 const faceToEyesDot = dorsalNormal.dot(toWrist.clone().negate()); // Watch face tilted toward eyes
 
+                // User looks at wrist: Head oriented toward wrist, watch face tilted toward eyes, ergonomic distance
                 let isLookingAtWristNow = (
-                    gazeDot > 0.38 &&
-                    faceToEyesDot > 0.10 &&
+                    gazeDot > 0.45 &&
+                    faceToEyesDot > 0.15 &&
                     dist >= 0.15 &&
-                    dist <= 0.85 &&
+                    dist <= 0.65 &&
                     targetWatchPos.y > 0.35
                 );
 
                 // Hysteresis Filter: Rapid response with zero flicker
                 if (isLookingAtWristNow) {
-                    this.wristLookCounter = Math.min(6, this.wristLookCounter + 1);
+                    this.wristLookCounter = Math.min(8, this.wristLookCounter + 1);
                     this.wristAwayCounter = 0;
                     if (this.wristLookCounter >= 2) {
                         this.isWristLooking = true;
@@ -4001,7 +4000,7 @@ export class PalmMenu {
                     }
                 } else {
                     this.wristAwayCounter = Math.min(20, this.wristAwayCounter + 1);
-                    if (this.wristAwayCounter >= 8) {
+                    if (this.wristAwayCounter >= 6) {
                         this.wristLookCounter = Math.max(0, this.wristLookCounter - 1);
                         if (this.wristLookCounter <= 1) {
                             this.isWristLooking = false;
@@ -4009,12 +4008,22 @@ export class PalmMenu {
                     }
                 }
 
+                // Smartwatch Visibility: COMPLETELY HIDDEN when doing lab work / looking away.
+                // Only materializes when student intentionally looks at their left wrist (or menu is open).
+                const targetWatchScale = (this.isWristLooking || this.isPalmOpen) ? 1.0 : 0.0;
+                this.wristBtnScale = THREE.MathUtils.lerp(this.wristBtnScale, targetWatchScale, 0.28);
+                if (this.wristBtnScale < 0.01) {
+                    this.wristButton.scale.set(0, 0, 0);
+                    this.wristButton.visible = false;
+                } else {
+                    this.wristButton.scale.setScalar(this.wristBtnScale);
+                    this.wristButton.visible = true;
+                }
+
                 // Animate "OPEN LAB MENU" holographic label and aura ring
-                const targetLabelScale = this.isWristLooking ? 1.0 : 0.0;
-                this.wristBtnScale = THREE.MathUtils.lerp(this.wristBtnScale, targetLabelScale, 0.25);
                 if (this.wristLabelSprite) {
                     this.wristLabelSprite.scale.set(0.075 * this.wristBtnScale, 0.018 * this.wristBtnScale, 1.0);
-                    this.wristLabelSprite.visible = this.wristBtnScale > 0.02;
+                    this.wristLabelSprite.visible = this.wristBtnScale > 0.35;
                 }
                 if (this.wristAuraRing) {
                     const auraMat = this.wristAuraRing.material as THREE.MeshStandardMaterial;
@@ -4100,7 +4109,7 @@ export class PalmMenu {
             }
 
             // 7. Right Fingertip Poke on 3D Wrist Button -> Toggle Menu (with Debounce & Visual Press)
-            if (rightIndexTipPos && this.wristButton.visible) {
+            if (rightIndexTipPos && this.wristButton.visible && this.wristBtnScale > 0.6) {
                 const btnPos = new THREE.Vector3();
                 this.wristButton.getWorldPosition(btnPos);
                 const distToBtn = rightIndexTipPos.distanceTo(btnPos);
