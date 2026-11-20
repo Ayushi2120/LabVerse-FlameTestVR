@@ -600,6 +600,13 @@ export class FlameTestLogic {
     public updateTargetArrowVisibility() {
         if (!this.targetArrowGroup) return;
 
+        // In VR, remove debug/giant directional arrows to keep the immersive laboratory pristine
+        const isPresenting = !!(this.world && (this.world as any).renderer?.xr?.isPresenting);
+        if (isPresenting) {
+            this.targetArrowGroup.visible = false;
+            return;
+        }
+
         // Strictly hide during orientation, or if all salts are finished, or if sample already collected on wire
         if (
             this.currentState === ExperimentState.ORIENTATION ||
@@ -738,20 +745,22 @@ export class FlameTestLogic {
     }
 
     public onXRSessionStart() {
-        const camPos = new THREE.Vector3();
-        const camDir = new THREE.Vector3();
-        if (this.world && (this.world as any).camera) {
-            (this.world as any).camera.getWorldPosition(camPos);
-            (this.world as any).camera.getWorldDirection(camDir);
-        }
         if (this.orientationScreen) {
-            this.orientationScreen.setVRMode(true, camPos, camDir);
+            // Keep VR laboratory clean — do not float giant rectangular panels in front of user's face
+            this.orientationScreen.setVRMode(false);
+            this.orientationScreen.getGroup().visible = false;
+        }
+        if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
+            this.startExperiment();
         }
     }
 
     public onXRSessionEnd() {
         if (this.orientationScreen) {
             this.orientationScreen.setVRMode(false);
+            if (this.currentState === ExperimentState.ORIENTATION) {
+                this.orientationScreen.getGroup().visible = true;
+            }
         }
     }
 
@@ -1749,26 +1758,12 @@ export class FlameTestLogic {
         const renderer = (this.world as any).renderer;
         const isPresenting = !!(renderer && renderer.xr && renderer.xr.isPresenting);
 
-        // Keep UI screen distance synchronized in VR (close floating screen ~0.85m) vs Desktop (1.75m)
+        // In VR, keep rectangular screens off the player's face
         if (this.orientationScreen) {
-            if (isPresenting && !this.orientationScreen.getIsVRMode()) {
-                const camPos = new THREE.Vector3();
-                const camDir = new THREE.Vector3();
-                if (this.world && (this.world as any).camera) {
-                    (this.world as any).camera.getWorldPosition(camPos);
-                    (this.world as any).camera.getWorldDirection(camDir);
-                }
-                this.orientationScreen.setVRMode(true, camPos, camDir);
-            } else if (!isPresenting && this.orientationScreen.getIsVRMode()) {
-                this.orientationScreen.setVRMode(false);
-            } else if (isPresenting && this.orientationScreen.getIsVRMode() && (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING)) {
-                const camPos = new THREE.Vector3();
-                const camDir = new THREE.Vector3();
-                if (this.world && (this.world as any).camera) {
-                    (this.world as any).camera.getWorldPosition(camPos);
-                    (this.world as any).camera.getWorldDirection(camDir);
-                }
-                this.orientationScreen.updateVRPose(camPos, camDir);
+            if (isPresenting) {
+                this.orientationScreen.getGroup().visible = false;
+            } else if (!isPresenting && this.currentState === ExperimentState.ORIENTATION) {
+                this.orientationScreen.getGroup().visible = true;
             }
         }
 

@@ -626,4 +626,56 @@ export class AudioEngine {
             osc.stop(now + 0.32);
         });
     }
+
+    /**
+     * Subtle futuristic holographic hover chime when fingertip approaches a 3D menu object.
+     * Soft high-frequency crystal resonance with rapid decay.
+     */
+    public playWristHover() {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1479.98, now); // F#6
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.045, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+    }
+
+    /**
+     * Soft harmonic collapse sound when the spherical menu closes.
+     */
+    public playWristClose() {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        const freqs = [783.99, 587.33, 392.00]; // G5 -> D5 -> G4
+        freqs.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+
+            gain.gain.setValueAtTime(0, now + idx * 0.04);
+            gain.gain.linearRampToValueAtTime(0.08, now + idx * 0.04 + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.24);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.04);
+            osc.stop(now + idx * 0.04 + 0.24);
+        });
+    }
 }

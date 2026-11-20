@@ -63,8 +63,8 @@ export const NARRATION_LINES: Record<VoiceStageKey, string> = {
     snitchCaught: "Well caught, Seeker!",
 
     // Wrist-Attached 3D Menu English Narration Suite
-    wristDiscovery: "When you are ready, look at your left wrist to open your Lab Menu.",
-    wristActivated: "Your Lab Menu is open. Point with your right index finger and gently tap an option to continue.",
+    wristDiscovery: "Look at your wrist. Gently poke the glowing button to open your Lab Menu.",
+    wristActivated: "Your Lab Menu is opening. Choose an option by gently poking one of the floating objects.",
     optionSelected: "Option selected. Opening your guide now.",
     stepsNarration: "Follow the experiment one step at a time. You can reopen this guide whenever you need help.",
     guideNarration: "Use your right index finger to gently tap the highlighted objects. Watch for the glow to confirm your selection.",
