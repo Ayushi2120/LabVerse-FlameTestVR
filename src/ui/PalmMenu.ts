@@ -805,6 +805,7 @@ function buildWristButtonMesh(): THREE.Group {
 
     // Label banner above watch: "OPEN LAB MENU"
     const tapSpr = labelSprite('OPEN LAB MENU', '#00e5ff');
+    tapSpr.name = 'WristMenuLabelSprite';
     tapSpr.scale.set(0.075, 0.018, 1);
     tapSpr.position.set(0, 0.046, 0.006);
     g.add(tapSpr);
@@ -3631,6 +3632,7 @@ export class PalmMenu {
     public wristButton: THREE.Group;
     private wristCoreGroup: THREE.Group | null = null;
     private wristAuraRing: THREE.Mesh | null = null;
+    private wristLabelSprite: THREE.Sprite | null = null;
     private isWristLooking = false;
     private wristLookCounter = 0;
     private wristAwayCounter = 0;
@@ -3672,6 +3674,11 @@ export class PalmMenu {
         this.wristButton.scale.set(0, 0, 0);
         this.wristCoreGroup = this.wristButton.getObjectByName('WristButtonCoreGroup') as THREE.Group;
         this.wristAuraRing = this.wristButton.getObjectByName('WristAuraRing') as THREE.Mesh;
+        this.wristLabelSprite = this.wristButton.getObjectByName('WristMenuLabelSprite') as THREE.Sprite;
+        if (this.wristLabelSprite) {
+            this.wristLabelSprite.scale.set(0, 0, 0);
+            this.wristLabelSprite.visible = false;
+        }
         this.scene.add(this.wristButton);
 
         // Build compact wrist holographic radial arc menu group
@@ -3824,29 +3831,98 @@ export class PalmMenu {
             //  VR HEADSET & HAND TRACKING MODE
             // ========================================================
 
-            // 1. VR Hand Tracking: Left Wrist Detection
-            let leftWristFound = false;
-            const leftWristPos = PalmMenu._scratchWPos;
-            const leftWristQuat = PalmMenu._scratchWQuat;
+            // 1. Identify Left and Right Hands thoroughly
+            let leftHand: any = null;
+            let rightHand: any = null;
 
-            // Priority A: XR Hand Joints
             for (let h = 0; h < 2; h++) {
                 const hand = renderer.xr.getHand ? renderer.xr.getHand(h) : null;
                 if (!hand) continue;
 
-                const handedness = hand.userData?.handedness || (hand as any).handedness ||
-                    ((hand as any).inputSource && (hand as any).inputSource.handedness) || (h === 0 ? 'left' : 'right');
-                if (handedness !== 'left') continue;
+                let handedness = hand.userData?.handedness || (hand as any).handedness;
+                if (!handedness && (hand as any).inputSource) {
+                    handedness = (hand as any).inputSource.handedness;
+                }
+                if (!handedness && renderer.xr.getSession) {
+                    const session = renderer.xr.getSession();
+                    if (session && session.inputSources && session.inputSources[h]) {
+                        handedness = session.inputSources[h].handedness;
+                    }
+                }
+                if (!handedness) {
+                    handedness = h === 0 ? 'left' : 'right';
+                }
 
-                const joints = (hand as any).joints;
+                if (handedness === 'left') leftHand = hand;
+                if (handedness === 'right') rightHand = hand;
+            }
+
+            // 2. Extract Left Wrist Pose & Anatomical Arm Coordinate Basis
+            let leftWristFound = false;
+            const leftWristPos = PalmMenu._scratchWPos;
+            const leftWristQuat = PalmMenu._scratchWQuat;
+            const dorsalNormal = new THREE.Vector3(0, 1, 0);
+            const armForward = new THREE.Vector3(0, 0, -1);
+            const watchQuat = new THREE.Quaternion();
+
+            if (leftHand) {
+                leftHand.updateMatrixWorld(true);
+                const joints = (leftHand as any).joints;
                 if (joints) {
                     const wrist = joints['wrist'] || joints[0];
+                    const middleKnuckle = joints['middle-finger-metacarpal'] || joints[10] ||
+                        joints['middle-finger-phalanx-proximal'] || joints[11];
+                    const indexKnuckle = joints['index-finger-metacarpal'] || joints[5] ||
+                        joints['index-finger-phalanx-proximal'] || joints[6];
+                    const pinkyKnuckle = joints['pinky-finger-metacarpal'] || joints[20] ||
+                        joints['pinky-finger-phalanx-proximal'] || joints[21];
+
                     if (wrist) {
                         wrist.getWorldPosition(leftWristPos);
                         wrist.getWorldQuaternion(leftWristQuat);
+
                         if (leftWristPos.lengthSq() > 0.01) {
                             leftWristFound = true;
-                            break;
+
+                            const middlePos = new THREE.Vector3();
+                            const indexPos = new THREE.Vector3();
+                            const pinkyPos = new THREE.Vector3();
+
+                            if (middleKnuckle && indexKnuckle && pinkyKnuckle) {
+                                middleKnuckle.getWorldPosition(middlePos);
+                                indexKnuckle.getWorldPosition(indexPos);
+                                pinkyKnuckle.getWorldPosition(pinkyPos);
+                            }
+
+                            if (middlePos.lengthSq() > 0.01 && indexPos.lengthSq() > 0.01 && pinkyPos.lengthSq() > 0.01) {
+                                // Forearm / Hand longitudinal direction (from wrist towards fingers)
+                                armForward.subVectors(middlePos, leftWristPos).normalize();
+
+                                // Transverse direction across back of hand (pinky -> index)
+                                const handAcross = new THREE.Vector3().subVectors(indexPos, pinkyPos).normalize();
+
+                                // Dorsal normal pointing straight out from back of wrist
+                                dorsalNormal.crossVectors(handAcross, armForward).normalize();
+
+                                // Watch coordinate frame:
+                                // +Z = dorsal normal (dial face flush on back of wrist)
+                                // +Y = arm forward (straps along forearm towards fingers)
+                                // +X = across wrist (crown)
+                                const zAxis = dorsalNormal.clone();
+                                const yAxis = armForward.clone().projectOnPlane(zAxis).normalize();
+                                const xAxis = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();
+
+                                watchQuat.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis));
+                            } else {
+                                // Joint orientation fallback
+                                const zAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(leftWristQuat).normalize();
+                                const yAxis = new THREE.Vector3(0, 0, -1).applyQuaternion(leftWristQuat).projectOnPlane(zAxis).normalize();
+                                const xAxis = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();
+
+                                watchQuat.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis));
+                                dorsalNormal.copy(zAxis);
+                                armForward.copy(yAxis);
+                            }
                         }
                     }
                 }
@@ -3860,80 +3936,107 @@ export class PalmMenu {
                     const handedness = ctrl.userData?.handedness || (ctrl as any).handedness || (c === 0 ? 'left' : 'right');
                     if (handedness === 'left') {
                         ctrl.updateMatrixWorld(true);
-                        ctrl.getWorldPosition(leftWristPos);
+                        const ctrlPos = new THREE.Vector3();
+                        ctrl.getWorldPosition(ctrlPos);
                         ctrl.getWorldQuaternion(leftWristQuat);
-                        if (leftWristPos.lengthSq() > 0.01) {
+                        if (ctrlPos.lengthSq() > 0.01) {
                             leftWristFound = true;
+                            const ctrlBack = new THREE.Vector3(0, 0, 1).applyQuaternion(leftWristQuat);
+                            leftWristPos.copy(ctrlPos).addScaledVector(ctrlBack, 0.07);
+
+                            const zAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(leftWristQuat).normalize();
+                            const yAxis = new THREE.Vector3(0, 0, -1).applyQuaternion(leftWristQuat).projectOnPlane(zAxis).normalize();
+                            const xAxis = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();
+
+                            watchQuat.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis));
+                            dorsalNormal.copy(zAxis);
+                            armForward.copy(yAxis);
                             break;
                         }
                     }
                 }
             }
 
-            // 2. Gaze Detection: Is student looking toward left wrist?
-            let isLookingAtWristNow = false;
+            // 3. Physical Placement of Watch on Dorsal Left Wrist
             if (leftWristFound) {
-                const toWrist = PalmMenu._scratchToWrist.copy(leftWristPos).sub(camPos);
+                // Sits flush on dorsal surface of wrist: +2.2cm in dorsal normal, -1.8cm along forearm
+                const targetWatchPos = PalmMenu._scratchTargetPos.copy(leftWristPos)
+                    .addScaledVector(dorsalNormal, 0.022)
+                    .addScaledVector(armForward, -0.018);
+
+                // 1:1 PHYSICAL ANCHORING (Glued to wrist, rotating with wrist like a real watch)
+                this.wristButton.position.copy(targetWatchPos);
+                this.wristButton.quaternion.copy(watchQuat);
+                this.wristButton.scale.set(1, 1, 1);
+                this.wristButton.visible = true;
+
+                // 4. Gaze & Glance Detection (Smartwatch Wake-up)
+                const toWrist = PalmMenu._scratchToWrist.copy(targetWatchPos).sub(camPos);
                 const dist = toWrist.length();
                 toWrist.normalize();
 
-                const gazeDot = camDir.dot(toWrist);
-                // Gaze cone: dot > 0.46 (~62° FOV), comfortable distance 0.10m - 0.85m, y > 0.35m
-                if (gazeDot > 0.46 && dist >= 0.10 && dist <= 0.85 && leftWristPos.y > 0.35) {
-                    isLookingAtWristNow = true;
-                }
-            }
+                const gazeDot = camDir.dot(toWrist); // Head oriented toward wrist
+                const faceToEyesDot = dorsalNormal.dot(toWrist.clone().negate()); // Watch face tilted toward eyes
 
-            // Hysteresis Filter: Prevents micro-flicker
-            if (isLookingAtWristNow) {
-                this.wristLookCounter = Math.min(6, this.wristLookCounter + 1);
-                this.wristAwayCounter = 0;
-                if (this.wristLookCounter >= 2) {
-                    this.isWristLooking = true;
+                let isLookingAtWristNow = (
+                    gazeDot > 0.38 &&
+                    faceToEyesDot > 0.10 &&
+                    dist >= 0.15 &&
+                    dist <= 0.85 &&
+                    targetWatchPos.y > 0.35
+                );
 
-                    // Voice 1 — Wrist Discovery (play once when looking at left wrist)
-                    if (!this.hasPromptedWristDiscovery) {
-                        this.hasPromptedWristDiscovery = true;
-                        this.audio.voice.speak('wristDiscovery');
+                // Hysteresis Filter: Rapid response with zero flicker
+                if (isLookingAtWristNow) {
+                    this.wristLookCounter = Math.min(6, this.wristLookCounter + 1);
+                    this.wristAwayCounter = 0;
+                    if (this.wristLookCounter >= 2) {
+                        this.isWristLooking = true;
+
+                        // Voice 1 — Wrist Discovery (play once when looking at left wrist)
+                        if (!this.hasPromptedWristDiscovery) {
+                            this.hasPromptedWristDiscovery = true;
+                            this.audio.voice.speak('wristDiscovery');
+                        }
+                    }
+                } else {
+                    this.wristAwayCounter = Math.min(20, this.wristAwayCounter + 1);
+                    if (this.wristAwayCounter >= 8) {
+                        this.wristLookCounter = Math.max(0, this.wristLookCounter - 1);
+                        if (this.wristLookCounter <= 1) {
+                            this.isWristLooking = false;
+                        }
                     }
                 }
-            } else {
-                this.wristAwayCounter = Math.min(20, this.wristAwayCounter + 1);
-                if (this.wristAwayCounter >= 12) {
-                    this.wristLookCounter = Math.max(0, this.wristLookCounter - 1);
-                    if (this.wristLookCounter <= 1) {
-                        this.isWristLooking = false;
-                    }
+
+                // Animate "OPEN LAB MENU" holographic label and aura ring
+                const targetLabelScale = this.isWristLooking ? 1.0 : 0.0;
+                this.wristBtnScale = THREE.MathUtils.lerp(this.wristBtnScale, targetLabelScale, 0.25);
+                if (this.wristLabelSprite) {
+                    this.wristLabelSprite.scale.set(0.075 * this.wristBtnScale, 0.018 * this.wristBtnScale, 1.0);
+                    this.wristLabelSprite.visible = this.wristBtnScale > 0.02;
                 }
-            }
-
-            // 3. Wrist Button Visibility & 1:1 Physical Positioning
-            const targetBtnScale = this.isWristLooking ? 1.0 : 0.0;
-            this.wristBtnScale = THREE.MathUtils.lerp(this.wristBtnScale, targetBtnScale, 0.25);
-            this.wristButton.scale.setScalar(this.wristBtnScale);
-            this.wristButton.visible = this.wristBtnScale > 0.02;
-
-            if (leftWristFound) {
-                const dorsalDir = new THREE.Vector3(0, 1, 0).applyQuaternion(leftWristQuat);
-                const forwardDir = new THREE.Vector3(0, 0, -1).applyQuaternion(leftWristQuat);
-
-                if (this.wristButton.visible) {
-                    const targetWatchPos = PalmMenu._scratchTargetPos.copy(leftWristPos)
-                        .addScaledVector(dorsalDir, this.anchorConfig.buttonDorsalOffset);
-                    // 1:1 RIGID SYNC (Zero drift, zero lerp lag)
-                    this.wristButton.position.copy(targetWatchPos);
-                    this.wristButton.lookAt(camPos);
+                if (this.wristAuraRing) {
+                    const auraMat = this.wristAuraRing.material as THREE.MeshStandardMaterial;
+                    const targetAura = this.isWristLooking ? 1.4 : 0.45;
+                    auraMat.emissiveIntensity = THREE.MathUtils.lerp(auraMat.emissiveIntensity, targetAura, 0.2);
                 }
 
-                // 6. Anchor Floating Holographic Radial Arc Menu to Left Wrist (1:1 RIGID SYNC)
+                // 5. Anchor 3D Radial Arc Menu directly above the wrist (1:1 Rigid Anchoring)
                 if (this.isPalmOpen) {
                     this.palmGroup.visible = true;
-                    const targetMenuPos = PalmMenu._scratchTargetPos.copy(leftWristPos)
-                        .addScaledVector(dorsalDir, this.anchorConfig.menuDorsalClearance)
-                        .addScaledVector(forwardDir, this.anchorConfig.menuForwardOffset);
-                    // 1:1 RIGID SYNC (Zero drift, zero lag when hand moves or rotates)
+                    // Elevated above the watch: +9.5cm dorsal clearance, +2.0cm forward towards fingers
+                    const targetMenuPos = PalmMenu._scratchTargetPos.copy(targetWatchPos)
+                        .addScaledVector(dorsalNormal, 0.095)
+                        .addScaledVector(armForward, 0.020);
+
                     this.palmGroup.position.copy(targetMenuPos);
-                    this.palmGroup.lookAt(camPos);
+
+                    // Orientation: tilts comfortably towards the student's eyes
+                    const toEyes = camPos.clone().sub(targetMenuPos).normalize();
+                    const menuUp = armForward.clone().projectOnPlane(toEyes).normalize();
+                    const menuMatrix = new THREE.Matrix4().lookAt(targetMenuPos, camPos, menuUp);
+                    this.palmGroup.quaternion.setFromRotationMatrix(menuMatrix);
                 }
             } else {
                 // Tracking loss handling: gracefully hide rather than leaving floating
@@ -3941,19 +4044,13 @@ export class PalmMenu {
                 this.palmGroup.visible = false;
             }
 
-            // 4. Right Hand Fingertip Tracking for Wrist Button & Menu Interaction
+            // 6. Right Hand Fingertip Tracking for Wrist Button & Menu Interaction
             let rightIndexTipPos: THREE.Vector3 | null = null;
             let rightPinchingOrFist = false;
 
-            for (let h = 0; h < 2; h++) {
-                const hand = renderer.xr.getHand ? renderer.xr.getHand(h) : null;
-                if (!hand) continue;
-
-                const handedness = hand.userData?.handedness || (hand as any).handedness ||
-                    ((hand as any).inputSource && (hand as any).inputSource.handedness) || (h === 1 ? 'right' : 'left');
-                if (handedness !== 'right') continue;
-
-                const joints = (hand as any).joints;
+            if (rightHand) {
+                rightHand.updateMatrixWorld(true);
+                const joints = (rightHand as any).joints;
                 if (joints) {
                     const idxTip = joints['index-finger-tip'] || joints[9] || joints[8];
                     const thumbTip = joints['thumb-tip'] || joints[4];
@@ -3981,7 +4078,6 @@ export class PalmMenu {
                             rightPinchingOrFist = true;
                         }
                     }
-                    break;
                 }
             }
 
@@ -4003,7 +4099,7 @@ export class PalmMenu {
                 }
             }
 
-            // 5. Right Fingertip Poke on 3D Wrist Button -> Toggle Menu (with Debounce & Visual Press)
+            // 7. Right Fingertip Poke on 3D Wrist Button -> Toggle Menu (with Debounce & Visual Press)
             if (rightIndexTipPos && this.wristButton.visible) {
                 const btnPos = new THREE.Vector3();
                 this.wristButton.getWorldPosition(btnPos);
@@ -4071,6 +4167,10 @@ export class PalmMenu {
             // 1. Elegant 3D Smartwatch in Student's Lower-Left View
             this.wristButton.visible = true;
             this.wristButton.scale.setScalar(1.0);
+            if (this.wristLabelSprite) {
+                this.wristLabelSprite.visible = true;
+                this.wristLabelSprite.scale.set(0.075, 0.018, 1.0);
+            }
 
             if (this.world.camera) {
                 const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion((this.world.camera as any).quaternion);
@@ -4083,7 +4183,13 @@ export class PalmMenu {
                     .add(camUp.clone().multiplyScalar(-0.12 + watchBob));
 
                 this.wristButton.position.lerp(watchTargetPos, 0.20);
-                this.wristButton.lookAt(camPos);
+
+                // Correct desktop orientation: +Z points towards camera so dial face is visible
+                const toCam = camPos.clone().sub(watchTargetPos).normalize();
+                const xAxis = new THREE.Vector3().crossVectors(camUp, toCam).normalize();
+                const yAxis = new THREE.Vector3().crossVectors(toCam, xAxis).normalize();
+                const deskMatrix = new THREE.Matrix4().makeBasis(xAxis, yAxis, toCam);
+                this.wristButton.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(deskMatrix), 0.20);
 
                 // 2. Floating Radial Arc Menu smoothly tracking in front of player
                 if (this.isPalmOpen) {
