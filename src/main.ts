@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { World, LocomotionEnvironment, PokeInteractable, RayInteractable, ReferenceSpaceType } from '@iwsdk/core';
+import { World, PokeInteractable, RayInteractable, ReferenceSpaceType } from '@iwsdk/core';
 import { RayDisplayMode, outlineMaterial } from '@iwsdk/xr-input';
 import { MaterialLibrary } from './materials/MaterialLibrary';
 import { createRoom } from './scene/Room';
@@ -15,6 +15,7 @@ import { tintSceneHandMeshes } from './scene/equipment/NitrileGloves';
 async function init() {
     const container = document.getElementById('app')!;
     
+    // Create Stationary VR World with natural hand-tracking & grabbing (locomotion systems completely disabled)
     const world = await World.create(container, {
         xr: {
             referenceSpace: ReferenceSpaceType.LocalFloor,
@@ -23,18 +24,19 @@ async function init() {
             }
         },
         features: {
-            grabbing: { useHandPinchForGrab: true },
-            locomotion: {
-                initialPlayerPosition: [0, 0, -0.22], // Designated fixed standing position directly in front of central chemistry workstation
-                browserControls: { keyboard: true }
-            }
+            grabbing: { useHandPinchForGrab: true }
         },
         render: {
             camera: {
-                position: [0, 1.6, 0] // Standing height offset
+                position: [0, 1.6, -0.22] // Standing eye height offset in front of chemistry workstation
             }
         }
     });
+
+    // Anchor fixed stationary player rig at central chemistry workstation
+    if (world.player) {
+        world.player.position.set(0, 0, -0.22);
+    }
 
     // Optimize depth clipping planes for maximum WebGL depth buffer precision (eliminates Z-fighting across 0.05m-35m room)
     if (world.camera) {
@@ -60,8 +62,7 @@ async function init() {
     
     const roomGroup = createRoom(materials);
     scene.add(roomGroup as any);
-    const roomEntity = world.createTransformEntity(roomGroup as any);
-    roomEntity.addComponent(LocomotionEnvironment);
+    world.createTransformEntity(roomGroup as any);
 
     const furnitureGroup = createFurniture(materials);
     scene.add(furnitureGroup as any);
@@ -697,18 +698,16 @@ async function init() {
         if (hudEl) {
             if (isGloved && !hudEl.dataset.gloved) {
                 hudEl.dataset.gloved = 'true';
-                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>Stationary Workstation</span> &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
             } else if (!isGloved && hudEl.dataset.gloved) {
                 delete hudEl.dataset.gloved;
-                hudEl.innerHTML = `<span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>Stationary Workstation</span> &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
             }
         }
 
-        // In Stationary VR mode, anchor virtual player position firmly at designated workstation location (0, 0, -0.22)
-        if (isPresentingXR && world.player) {
+        // Keep stationary player position locked to designated workstation location (0, 0, -0.22)
+        if (world.player) {
             world.player.position.set(0, 0, -0.22);
-        } else if (world.player && world.player.position.y < 0) {
-            world.player.position.y = 0;
         }
     };
 
@@ -740,7 +739,7 @@ async function init() {
         try {
             const isSupported = await (navigator as any).xr.isSessionSupported('immersive-vr');
             if (!isSupported) {
-                showToast("🥽 No VR Headset Detected! Immersive VR mode requires a Meta Quest headset or VR hardware. Click 'START EXPERIMENT' on the screen to play directly in Desktop 3D Mode with WASD & Mouse!");
+                showToast("🥽 No VR Headset Detected! Immersive VR mode requires a Meta Quest headset or VR hardware. Click 'START EXPERIMENT' on the screen to play directly in Desktop 3D Mode!");
                 return;
             }
 
