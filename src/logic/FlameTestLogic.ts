@@ -4,7 +4,6 @@ import { AudioEngine } from '../audio/AudioEngine';
 import { OrientationScreen3D } from '../ui/OrientationScreen3D';
 import { ResultDisplay3D } from '../ui/ResultDisplay3D';
 import { LabBook3D } from '../ui/LabBook3D';
-import { PalmMenu } from '../ui/PalmMenu';
 import { RealisticFlame } from '../scene/equipment/RealisticFlame';
 import { GoldenSnitch } from '../scene/GoldenSnitch';
 import { HogwartsLetter } from '../scene/HogwartsLetter';
@@ -60,7 +59,6 @@ export class FlameTestLogic {
     private orientationScreen!: OrientationScreen3D;
     private resultDisplay3D!: ResultDisplay3D;
     private labBook!: LabBook3D;
-    private palmMenu!: PalmMenu;
 
     // Sequential Multi-Salt Challenge Tracking (Feature 2)
     private currentTargetSaltIndex = 0; // 0: Salt A, 1: Salt B, 2: Salt C, 3: Salt D, 4: Salt E, 5: Salt F (SrCl2)
@@ -443,12 +441,6 @@ export class FlameTestLogic {
             onPageFlip: () => this.audio.playBlip()
         });
         this.scene.add(this.labBook.getGroup());
-
-        // Initialize 3D Wrist-Attached Menu & Content Panels
-        this.palmMenu = new PalmMenu(this.scene, this.world, this.audio);
-        this.palmMenu.setOnRestartCallback(() => {
-            this.resetExperiment();
-        });
 
         // Initialize 3D Directional Target Arrow pointing directly to target salt (Feature 3)
         this.createTargetArrow();
@@ -1583,12 +1575,6 @@ export class FlameTestLogic {
         const now = Date.now();
         this.audio.resume();
 
-        // 0. Check 3D Wrist-Attached Menu & Content Panels Poke
-        if (this.palmMenu && this.palmMenu.checkPokeAndInteract(pokePos)) {
-            this.lastInteractionTime = now;
-            return;
-        }
-
         // 1. Check Desk Exit VR Switch Poke (ALWAYS UNBLOCKED in ALL states, right by user's hands)
         if (this.wallExitVRButtonMesh) {
             const exitVRPos = FlameTestLogic._scratchExitPos;
@@ -1764,14 +1750,6 @@ export class FlameTestLogic {
                 this.orientationScreen.getGroup().visible = false;
             } else if (!isPresenting && this.currentState === ExperimentState.ORIENTATION) {
                 this.orientationScreen.getGroup().visible = true;
-            }
-        }
-
-        // Update 3D Wrist-Attached Menu & Floating Panels
-        if (this.palmMenu) {
-            this.palmMenu.update(delta);
-            if (this.labBook) {
-                this.palmMenu.setObservations(this.labBook.getObservations());
             }
         }
 
@@ -2403,10 +2381,6 @@ export class FlameTestLogic {
 
     public getLabBook(): LabBook3D {
         return this.labBook;
-    }
-
-    public getPalmMenu(): PalmMenu {
-        return this.palmMenu;
     }
 
     private showFeedback(text: string, position: THREE.Vector3) {

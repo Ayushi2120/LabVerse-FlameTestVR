@@ -253,16 +253,6 @@ async function init() {
     const desktopGrabInitialQuat = new THREE.Quaternion();
     const currentMouseVec = new THREE.Vector2(0, 0);
     const crosshairEl = document.getElementById('crosshair');
-    const menuBtnEl = document.getElementById('menu-btn');
-    if (menuBtnEl) {
-        menuBtnEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            logicEngine.getAudioEngine().resume();
-            if (logicEngine.getPalmMenu()) {
-                logicEngine.getPalmMenu().toggleOpen();
-            }
-        });
-    }
 
     window.addEventListener('mousemove', (e) => {
         currentMouseVec.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -325,11 +315,6 @@ async function init() {
 
                     // 2b. Check 3D Lab Book Click (Feature 4: Page Turning & Observations Review)
                     if (logicEngine.getLabBook() && logicEngine.getLabBook().handleClick(hitObj, intersects[i].point)) {
-                        break;
-                    }
-
-                    // 2c. Check 3D Wrist-Attached Menu & Floating Panels (6 Topics & Sub-panels)
-                    if (logicEngine.getPalmMenu() && logicEngine.getPalmMenu().handleClick(hitObj, intersects[i].point)) {
                         break;
                     }
 
@@ -525,14 +510,6 @@ async function init() {
         logicEngine.getAudioEngine().resume();
         const expState = logicEngine.getCurrentState();
         const k = e.key.toLowerCase();
-
-        // 3D Wrist Menu Shortcut ('M' toggles wrist holographic menu on/off)
-        if (k === 'm') {
-            if (logicEngine.getPalmMenu()) {
-                logicEngine.getPalmMenu().toggleOpen();
-            }
-            return;
-        }
 
         // Block tool shortcuts if experiment hasn't started yet (Feature 1 Gating)
         if (expState === ExperimentState.ORIENTATION || expState === ExperimentState.STARTING) {
