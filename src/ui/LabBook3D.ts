@@ -444,19 +444,9 @@ export class LabBook3D {
         const ctx = this.pagesCanvas.getContext('2d')!;
         ctx.clearRect(0, 0, 1536, 1024);
 
-        // Archival Grid Notebook Paper Background (Warm off-white)
+        // Archival Notebook Paper Background (Clean warm off-white, no grid)
         ctx.fillStyle = '#f8f5ee';
         ctx.fillRect(0, 0, 1536, 1024);
-
-        // Faint graph ruling lines
-        ctx.strokeStyle = 'rgba(200, 215, 230, 0.45)';
-        ctx.lineWidth = 1;
-        for (let y = 40; y < 1024; y += 32) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(1536, y);
-            ctx.stroke();
-        }
 
         // Center Spine Crease Gradient Shadow
         const spineShadow = ctx.createLinearGradient(740, 0, 796, 0);

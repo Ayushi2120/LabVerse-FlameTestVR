@@ -20,32 +20,24 @@ export function createRoom(materials: MaterialLibrary): THREE.Group {
     const roomD = 7.5;
     const roomH = 3.4;
 
-    // --- 1. TILED LABORATORY FLOOR ---
+    // --- 1. POLISHED SEAMLESS LABORATORY FLOOR (NO GRID) ---
     const floorTex = createCanvasTexture(512, 512, (ctx) => {
-        ctx.fillStyle = '#7a8b9e'; // Polished vinyl slate blue/gray
+        ctx.fillStyle = '#64748b'; // Polished laboratory slate gray
         ctx.fillRect(0, 0, 512, 512);
-        
-        // Grid tiles with subtle grout lines
-        ctx.strokeStyle = '#5c6b7c';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(0, 0, 512, 512);
-        ctx.strokeRect(0, 0, 256, 256);
-        ctx.strokeRect(256, 0, 256, 256);
-        ctx.strokeRect(0, 256, 256, 256);
-        ctx.strokeRect(256, 256, 256, 256);
 
-        // Subtle specks/terrazzo texture
-        ctx.fillStyle = '#a0b0c0';
-        for (let i = 0; i < 60; i++) {
+        // Subtle realistic terrazzo / micro-mineral specks (smooth, NO grid lines)
+        for (let i = 0; i < 150; i++) {
             const rx = Math.random() * 512;
             const ry = Math.random() * 512;
-            ctx.fillRect(rx, ry, 3, 3);
+            const size = 1 + Math.random() * 2;
+            ctx.fillStyle = Math.random() > 0.5 ? '#94a3b8' : '#475569';
+            ctx.fillRect(rx, ry, size, size);
         }
     });
     floorTex.wrapS = THREE.RepeatWrapping;
     floorTex.wrapT = THREE.RepeatWrapping;
-    floorTex.repeat.set(12, 9);
-    const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.25, metalness: 0.1 });
+    floorTex.repeat.set(6, 4.5);
+    const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.22, metalness: 0.08 });
     
     const floorGeo = new THREE.PlaneGeometry(roomW, roomD);
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -53,20 +45,12 @@ export function createRoom(materials: MaterialLibrary): THREE.Group {
     floor.receiveShadow = true;
     group.add(floor);
 
-    // --- 2. CEILING WITH ACOUSTIC TILES ---
+    // --- 2. SEAMLESS CLEAN LABORATORY CEILING (NO GRID) ---
     const ceilingTex = createCanvasTexture(512, 512, (ctx) => {
-        ctx.fillStyle = '#eeeeee';
+        ctx.fillStyle = '#f8fafc'; // Clean bright off-white ceiling
         ctx.fillRect(0, 0, 512, 512);
-        ctx.strokeStyle = '#cccccc';
-        ctx.lineWidth = 6;
-        ctx.strokeRect(0, 0, 512, 512);
-        ctx.strokeRect(0, 0, 256, 256);
-        ctx.strokeRect(256, 256, 256, 256);
     });
-    ceilingTex.wrapS = THREE.RepeatWrapping;
-    ceilingTex.wrapT = THREE.RepeatWrapping;
-    ceilingTex.repeat.set(10, 7.5);
-    const ceilingMat = new THREE.MeshStandardMaterial({ map: ceilingTex, roughness: 0.9 });
+    const ceilingMat = new THREE.MeshStandardMaterial({ map: ceilingTex, roughness: 0.95 });
     
     const ceilingGeo = new THREE.PlaneGeometry(roomW, roomD);
     const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);

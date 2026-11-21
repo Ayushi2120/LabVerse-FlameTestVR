@@ -338,11 +338,6 @@ async function init() {
                         logicEngine.triggerExitVR();
                         break;
                     }
-
-                    // Feature 1 Gating: Block all laboratory actions while in ORIENTATION or STARTING mode
-                    if (expState === ExperimentState.ORIENTATION || expState === ExperimentState.STARTING) {
-                        continue;
-                    }
                     
                     let current: THREE.Object3D | null = hitObj;
                     let isGlovesHit = false;
@@ -505,28 +500,27 @@ async function init() {
         if (isPointerLocked) e.preventDefault();
     });
 
-    // Keyboard shortcuts ('E' / 'G' for wire toggle, 'Q' for release wire, 'L' for burner, 'R' for reset)
+    // Keyboard shortcuts ('G' for gloves, 'E' for wire toggle, 'Q' for release wire, 'L' for burner, 'R' for reset)
     document.addEventListener('keydown', (e) => {
         logicEngine.getAudioEngine().resume();
-        const expState = logicEngine.getCurrentState();
         const k = e.key.toLowerCase();
 
-        // Block tool shortcuts if experiment hasn't started yet (Feature 1 Gating)
-        if (expState === ExperimentState.ORIENTATION || expState === ExperimentState.STARTING) {
-            if (k === 'e' || k === 'g' || k === 'l') {
-                return;
-            }
-        }
-
-        if (k === 'e' || k === 'g') {
+        if (k === 'g') {
+            logicEngine.equipGloves();
+        } else if (k === 'e') {
             if (!logicEngine.areGlovesEquippedState()) {
                 logicEngine.promptGlovesRequired();
             } else {
                 isWireHeld = !isWireHeld;
+                logicEngine.isHeldDesktop = isWireHeld;
+                if (!isWireHeld) {
+                    logicEngine.releaseWire();
+                }
             }
         } else if (k === 'q') {
             logicEngine.releaseWire();
             isWireHeld = false;
+            logicEngine.isHeldDesktop = false;
         }
         logicEngine.handleKey(e.key);
     });
@@ -576,11 +570,6 @@ async function init() {
                     if (
                         current.userData?.isStartExperimentButton ||
                         current.userData?.isEnterVRButton ||
-                        current.userData?.isWristButton ||
-                        current.userData?.isPalmIcon ||
-                        current.userData?.isPalmClose ||
-                        current.userData?.isObservationPanel ||
-                        current.userData?.isExperimentsPanel ||
                         current.userData?.isTabButton ||
                         current.userData?.isPrevButton ||
                         current.userData?.isNextButton ||
@@ -693,10 +682,10 @@ async function init() {
         if (hudEl) {
             if (isGloved && !hudEl.dataset.gloved) {
                 hudEl.dataset.gloved = 'true';
-                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>WASD</span> Walk &bull; <span>Click / E</span> Wire &bull; <span>L</span> Burner &bull; <span>Q</span> Release`;
             } else if (!isGloved && hudEl.dataset.gloved) {
                 delete hudEl.dataset.gloved;
-                hudEl.innerHTML = `<span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>WASD</span> Walk &bull; <span>Click</span> Interact &bull; <span>G</span> Gloves &bull; <span>E</span> Wire &bull; <span>L</span> Burner &bull; <span>Q</span> Release`;
             }
         }
 
@@ -727,14 +716,14 @@ async function init() {
         logicEngine.getAudioEngine().resume();
 
         if (!('xr' in navigator) || !(navigator as any).xr) {
-            showToast("⚠️ WebXR is not supported in this browser. Please open on a Meta Quest VR Headset (Meta Quest Browser) or Chrome/Edge with WebXR enabled. You can click 'START EXPERIMENT' on the screen to play in Desktop 3D Mode!");
+            showToast("⚠️ WebXR is not supported in this browser. Please open on a Meta Quest VR Headset (Meta Quest Browser) or Chrome/Edge with WebXR enabled. You can play directly in Desktop 3D Mode!");
             return;
         }
 
         try {
             const isSupported = await (navigator as any).xr.isSessionSupported('immersive-vr');
             if (!isSupported) {
-                showToast("🥽 No VR Headset Detected! Immersive VR mode requires a Meta Quest headset or VR hardware. Click 'START EXPERIMENT' on the screen to play directly in Desktop 3D Mode with WASD & Mouse!");
+                showToast("🥽 No VR Headset Detected! Immersive VR mode requires a Meta Quest headset or VR hardware. You can play directly in Desktop 3D Mode with WASD & Mouse!");
                 return;
             }
 
@@ -753,7 +742,7 @@ async function init() {
             yaw = 0;
         } catch (err: any) {
             console.warn("WebXR entry error:", err);
-            showToast(`⚠️ VR Session Error: ${err.message || 'Could not initialize VR'}. Click 'START EXPERIMENT' for Desktop 3D Mode!`);
+            showToast(`⚠️ VR Session Error: ${err.message || 'Could not initialize VR'}. You can play in Desktop 3D Mode!`);
         }
     }
 

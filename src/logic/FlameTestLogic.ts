@@ -46,8 +46,8 @@ export class FlameTestLogic {
     private chemicalSamples: any[] = [];
     private instructionBoardGroup: THREE.Group | null = null;
 
-    // Explicit Experiment State Machine (Starts in ORIENTATION mode)
-    private currentState: ExperimentState = ExperimentState.ORIENTATION;
+    // Explicit Experiment State Machine (Starts directly in active IDLE laboratory mode)
+    private currentState: ExperimentState = ExperimentState.IDLE;
     private currentChemical: any = null;
     private defaultFlameColor = 0x38bdf8;
     private burnTimer = 0;
@@ -420,11 +420,12 @@ export class FlameTestLogic {
         this.grabHintSprite.visible = false; // Hidden until safety gloves are equipped
         this.scene.add(this.grabHintSprite);
 
-        // Initialize 3D Orientation Screen (Feature 1 & 2 - Genuinely 3D, 1.75m distance)
+        // Initialize 3D Orientation Screen (kept hidden so lab table is unobstructed)
         this.orientationScreen = new OrientationScreen3D({
             onStartExperiment: () => this.startExperiment(),
             onEnterVR: () => this.triggerEnterVR()
         });
+        this.orientationScreen.getGroup().visible = false;
         this.scene.add(this.orientationScreen.getGroup());
 
         // Initialize 3D Result Device (Feature 4 - Positioned on user's right side)
@@ -750,9 +751,7 @@ export class FlameTestLogic {
     public onXRSessionEnd() {
         if (this.orientationScreen) {
             this.orientationScreen.setVRMode(false);
-            if (this.currentState === ExperimentState.ORIENTATION) {
-                this.orientationScreen.getGroup().visible = true;
-            }
+            this.orientationScreen.getGroup().visible = false;
         }
     }
 
@@ -768,10 +767,6 @@ export class FlameTestLogic {
     }
 
     public equipGloves() {
-        if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
-            this.showFeedback("Click START EXPERIMENT first!", new THREE.Vector3(-1.05, 1.08, -0.48));
-            return;
-        }
         if (this.areGlovesEquipped) {
             // If wire is held, warn user; otherwise allow unequipping gloves
             if (this.isWireCurrentlyHeld()) {
@@ -1074,10 +1069,6 @@ export class FlameTestLogic {
     // --- BURNER POWER SWITCH POKE / TOGGLE ---
     public toggleBurner() {
         if (!this.bunsenBurner) return;
-        if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
-            this.showFeedback("Click START EXPERIMENT first!", new THREE.Vector3(0.15, 1.05, -0.80));
-            return;
-        }
         this.audio.resume();
 
         // Button press animation feedback (depress switch mesh down, then spring back up)
@@ -1326,44 +1317,7 @@ export class FlameTestLogic {
             }
         }
 
-        // 2. In ORIENTATION or STARTING state: allow VR controller trigger / hand pinch raycast selection
-        if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
-            if (hasPointer && this.orientationScreen && this.orientationScreen.getGroup().visible) {
-                this.orientationScreen.getGroup().updateMatrixWorld(true);
-
-                // Direct check: if controller/hand origin is close to start button (< 0.45m), trigger Start!
-                const startBtn = this.orientationScreen.getStartButtonMesh();
-                if (startBtn) {
-                    const startPos = new THREE.Vector3();
-                    startBtn.getWorldPosition(startPos);
-                    if (origin.distanceTo(startPos) < 0.45) {
-                        this.startExperiment();
-                        return;
-                    }
-                }
-
-                // Check direct proximity to any button on orientation screen (< 0.30m)
-                if (this.orientationScreen.checkPokeAndInteract(origin)) {
-                    return;
-                }
-
-                const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(quat);
-                raycaster.set(origin, dir);
-                const intersects = raycaster.intersectObjects(this.orientationScreen.getGroup().children, true);
-                for (let i = 0; i < intersects.length; i++) {
-                    const hitObj = intersects[i].object;
-                    const hitPt = intersects[i].point;
-                    if (this.orientationScreen.handleClick(hitObj, hitPt)) {
-                        return;
-                    }
-                }
-            }
-
-            // Strict gating: Block laboratory equipment interactions until Start Experiment is activated
-            return;
-        }
-
-        // 3. Support raycast click on ResultDisplay3D (Continue, Reset, Exit VR)
+        // 2. Allow interaction with ResultDisplay3D (Continue, Reset, Exit VR)
         if (this.resultDisplay3D && this.resultDisplay3D.getGroup().visible && hasPointer) {
             // Check direct proximity (< 0.35m)
             if (this.resultDisplay3D.checkPokeAndInteract(origin)) {
@@ -1620,11 +1574,6 @@ export class FlameTestLogic {
             return;
         }
 
-        // If in ORIENTATION or STARTING, do not allow poking laboratory tools/burners
-        if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
-            return;
-        }
-
         // 4. Check Nitrile Gloves Dispenser Poke (Equip gloves on direct touch)
         if (!this.areGlovesEquipped) {
             const glovesPos = FlameTestLogic._scratchGlovesPos.set(-1.05, 0.90, -0.48);
@@ -1744,13 +1693,9 @@ export class FlameTestLogic {
         const renderer = (this.world as any).renderer;
         const isPresenting = !!(renderer && renderer.xr && renderer.xr.isPresenting);
 
-        // In VR, keep rectangular screens off the player's face
+        // Keep orientation screen hidden so lab table is completely unobstructed
         if (this.orientationScreen) {
-            if (isPresenting) {
-                this.orientationScreen.getGroup().visible = false;
-            } else if (!isPresenting && this.currentState === ExperimentState.ORIENTATION) {
-                this.orientationScreen.getGroup().visible = true;
-            }
+            this.orientationScreen.getGroup().visible = false;
         }
 
         if (isPresenting) {
@@ -1915,20 +1860,6 @@ export class FlameTestLogic {
             }
         } else {
             this.handTouchDots.forEach(d => d.visible = false);
-        }
-
-        // Feature 1: Keep experiment actions & hints completely inactive during ORIENTATION & STARTING
-        if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
-            if (this.targetBeaconMesh) this.targetBeaconMesh.visible = false;
-            if (this.grabHintSprite) this.grabHintSprite.visible = false;
-            if (this.wireGroup && this.wireGroup.userData.initialPosition) {
-                // Strict gating: keep wire fixed in place before Start Experiment is pressed
-                this.wireGroup.position.copy(this.wireGroup.userData.initialPosition);
-                if (this.wireGroup.userData.initialQuaternion) {
-                    this.wireGroup.quaternion.copy(this.wireGroup.userData.initialQuaternion);
-                }
-            }
-            return;
         }
 
         // Update Target Highlight Beacon (subtle beginner-friendly action guide)
