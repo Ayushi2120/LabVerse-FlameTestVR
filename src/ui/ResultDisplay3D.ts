@@ -344,10 +344,10 @@ export class ResultDisplay3D {
         if (horizDir.lengthSq() < 0.01) horizDir.set(0, 0, -1);
         const camRight = horizDir.clone().cross(worldUp).normalize();
 
-        // In VR: position at natural arm reach (0.72m) so CONTINUE, RESET, and crystal can be poked comfortably
-        // In Desktop: position at 1.25m so it doesn't obstruct view
-        const fwd = isVRMode ? 0.62 : 1.15;
-        const right = isVRMode ? 0.35 : 0.50;
+        // In VR: position at natural arm reach (0.58m) so CONTINUE, RESET, and crystal can be poked comfortably from stationary position
+        // In Desktop: position at 1.15m so it doesn't obstruct view
+        const fwd = isVRMode ? 0.58 : 1.15;
+        const right = isVRMode ? 0.28 : 0.45;
         this.targetDisplayScale = isVRMode ? 0.78 : 1.0;
 
         const targetPos = camPos.clone()

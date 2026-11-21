@@ -62,9 +62,8 @@ export class OrientationScreen3D {
         this.group = new THREE.Group();
         this.group.name = 'OrientationScreen3D';
 
-        // Positioned comfortably in front of user at natural eye height and 1.75m distance
-        // (Complies strictly with 1.5–2.0m distance requirement; never in user's face)
-        this.group.position.set(0, 1.62, -1.75);
+        // Positioned comfortably in front of user at natural eye height above workbench
+        this.group.position.set(0, 1.55, -1.35);
         this.group.rotation.x = -Math.PI / 36; // Subtle 5° ergonomic tilt toward user eye level
 
         this.buildTerminalChassis();
@@ -78,9 +77,9 @@ export class OrientationScreen3D {
     private hasVRPoseInitialized = false;
 
     // Viewport positioning for Desktop vs Meta Quest VR
-    private readonly desktopPos = new THREE.Vector3(0, 1.62, -1.75);
+    private readonly desktopPos = new THREE.Vector3(0, 1.55, -1.35);
     private readonly desktopRot = new THREE.Euler(-Math.PI / 36, 0, 0);
-    private readonly vrUIPos = new THREE.Vector3(0, 1.35, -0.60);
+    private readonly vrUIPos = new THREE.Vector3(0, 1.30, -0.58);
     private readonly vrUIRot = new THREE.Euler(-Math.PI / 36, 0, 0);
     private isVRMode = false;
 
@@ -120,8 +119,8 @@ export class OrientationScreen3D {
             // 4. Scale floating screen to 0.82 so it sits comfortably inside VR headset FOV
             this.group.scale.set(0.82, 0.82, 0.82);
 
-            // 5. Position floating screen comfortably close to user's eyes (0.60m: natural arm reach)
-            const vrDist = 0.60;
+            // 5. Position floating screen comfortably close to user's hands (0.58m: natural arm reach from stationary position)
+            const vrDist = 0.58;
             if (camPos && camDir && (camPos.lengthSq() > 0.001 || camDir.lengthSq() > 0.001)) {
                 this.hasVRPoseInitialized = true;
                 const horizDir = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();
@@ -169,7 +168,7 @@ export class OrientationScreen3D {
             const horizDir = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();
             if (horizDir.lengthSq() < 0.01) horizDir.set(0, 0, -1);
 
-            const vrDist = 0.60;
+            const vrDist = 0.58;
             const targetPos = camPos.clone().add(horizDir.multiplyScalar(vrDist));
             targetPos.y = (camPos.y > 0.6) ? Math.max(1.10, Math.min(1.60, camPos.y - 0.08)) : 1.35;
             this.group.position.copy(targetPos);

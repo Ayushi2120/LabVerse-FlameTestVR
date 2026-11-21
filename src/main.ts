@@ -25,7 +25,7 @@ async function init() {
         features: {
             grabbing: { useHandPinchForGrab: true },
             locomotion: {
-                initialPlayerPosition: [0, 0, -0.3], // Spawn closer to desk
+                initialPlayerPosition: [0, 0, -0.22], // Designated fixed standing position directly in front of central chemistry workstation
                 browserControls: { keyboard: true }
             }
         },
@@ -128,6 +128,9 @@ async function init() {
                 try {
                     renderer.xr.setReferenceSpaceType('local-floor');
                 } catch { /* ignore */ }
+            }
+            if (world.player) {
+                (world.player as any).position.set(0, 0, -0.22);
             }
             if (world.camera) {
                 (world.camera as any).near = 0.05;
@@ -701,8 +704,10 @@ async function init() {
             }
         }
 
-        // Prevent falling below floor
-        if (world.player && world.player.position.y < 0) {
+        // In Stationary VR mode, anchor virtual player position firmly at designated workstation location (0, 0, -0.22)
+        if (isPresentingXR && world.player) {
+            world.player.position.set(0, 0, -0.22);
+        } else if (world.player && world.player.position.y < 0) {
             world.player.position.y = 0;
         }
     };

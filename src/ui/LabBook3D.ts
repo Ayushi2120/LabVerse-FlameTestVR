@@ -56,11 +56,11 @@ export class LabBook3D {
         this.group = new THREE.Group();
         this.group.name = 'LabBook3DGroup';
 
-        // Position resting naturally on laboratory workbench tabletop (tabletop surface is at y = 0.90m)
-        // Positioned securely at x = 0.82m, z = -0.62m, resting flush on the table surface with generous spacing
-        // Subtle natural yaw angle (-0.16 rad / ~9 deg) facing student standing in front of table
-        this.group.position.set(0.82, 0.90, -0.62);
-        this.group.rotation.set(0, -0.16, 0);
+        // Position resting naturally on laboratory workbench tabletop at comfortable stationary arm reach (58cm)
+        // Positioned securely at x = 0.48m, z = -0.56m, resting flush on the table surface within effortless reach
+        // Subtle natural yaw angle (-0.20 rad / ~11 deg) facing student standing in front of workstation
+        this.group.position.set(0.48, 0.90, -0.56);
+        this.group.rotation.set(0, -0.20, 0);
 
         this.buildDeskBlotterAndCradle();
         this.buildBookModel();
