@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { World, LocomotionEnvironment, PokeInteractable, RayInteractable } from '@iwsdk/core';
+import { World, LocomotionEnvironment, PokeInteractable, RayInteractable, ReferenceSpaceType } from '@iwsdk/core';
 import { RayDisplayMode, outlineMaterial } from '@iwsdk/xr-input';
 import { MaterialLibrary } from './materials/MaterialLibrary';
 import { createRoom } from './scene/Room';
@@ -17,6 +17,7 @@ async function init() {
     
     const world = await World.create(container, {
         xr: {
+            referenceSpace: ReferenceSpaceType.LocalFloor,
             features: {
                 handTracking: true
             }
@@ -123,6 +124,11 @@ async function init() {
     if (renderer && renderer.xr) {
         // Resume Web Audio when XR session starts (crucial for Meta Quest / VR headset audio)
         renderer.xr.addEventListener('sessionstart', () => {
+            if (renderer && renderer.xr && typeof renderer.xr.setReferenceSpaceType === 'function') {
+                try {
+                    renderer.xr.setReferenceSpaceType('local-floor');
+                } catch { /* ignore */ }
+            }
             if (world.camera) {
                 (world.camera as any).near = 0.05;
                 (world.camera as any).far = 35.0;
@@ -733,11 +739,23 @@ async function init() {
                 return;
             }
 
+            if (renderer && renderer.xr && typeof renderer.xr.setReferenceSpaceType === 'function') {
+                try {
+                    renderer.xr.setReferenceSpaceType('local-floor');
+                } catch { /* ignore */ }
+            }
+
             if (typeof (world as any).launchXR === 'function') {
-                await (world as any).launchXR();
+                await (world as any).launchXR({
+                    referenceSpace: 'local-floor',
+                    features: {
+                        handTracking: true
+                    }
+                });
             } else if (renderer && renderer.xr) {
                 const session = await (navigator as any).xr.requestSession('immersive-vr', {
-                    optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+                    requiredFeatures: ['local-floor'],
+                    optionalFeatures: ['hand-tracking']
                 });
                 await renderer.xr.setSession(session);
             }

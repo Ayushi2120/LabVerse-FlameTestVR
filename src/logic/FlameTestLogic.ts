@@ -72,7 +72,6 @@ export class FlameTestLogic {
     private arrowLabelCanvas!: HTMLCanvasElement;
     private arrowLabelTexture!: THREE.CanvasTexture;
     private arrowLabelSprite!: THREE.Sprite;
-    private arrowAnimTime = 0;
 
     // Safety Equipment State
     private areGlovesEquipped = false;
@@ -591,25 +590,8 @@ export class FlameTestLogic {
 
     public updateTargetArrowVisibility() {
         if (!this.targetArrowGroup) return;
-
-        // Strictly hide during orientation, or if all salts are finished, or if sample already collected on wire
-        if (
-            this.currentState === ExperimentState.ORIENTATION ||
-            this.currentState === ExperimentState.STARTING ||
-            this.completedSalts.size >= 6 ||
-            this.currentTargetSaltIndex >= 6 ||
-            this.currentChemical !== null
-        ) {
-            this.targetArrowGroup.visible = false;
-            return;
-        }
-
-        // Show when user needs guidance to dip into target salt
-        if (this.areGlovesEquipped && (this.currentState === ExperimentState.WIRE_GRABBED || this.currentState === ExperimentState.IDLE)) {
-            this.targetArrowGroup.visible = true;
-        } else {
-            this.targetArrowGroup.visible = false;
-        }
+        // Never render artificial directional arrows or debug markers in the laboratory
+        this.targetArrowGroup.visible = false;
     }
 
     private findReferences() {
@@ -1936,53 +1918,14 @@ export class FlameTestLogic {
             return;
         }
 
-        // Update Target Highlight Beacon (subtle beginner-friendly action guide)
+        // Keep artificial boundary markers / beacon rings hidden
         if (this.targetBeaconMesh) {
-            this.beaconAnimTime += delta;
-            const bPulse = 1.0 + Math.sin(this.beaconAnimTime * 4) * 0.12;
-            const bAlpha = 0.35 + Math.sin(this.beaconAnimTime * 4) * 0.2;
-            this.targetBeaconMesh.scale.set(bPulse, bPulse, bPulse);
-            (this.targetBeaconMesh.material as THREE.MeshBasicMaterial).opacity = bAlpha;
-
-            switch (this.currentState) {
-                case ExperimentState.IDLE:
-                    this.targetBeaconMesh.visible = true;
-                    this.targetBeaconMesh.position.set(0.00, 0.935, -0.58);
-                    break;
-                case ExperimentState.WIRE_GRABBED:
-                    this.targetBeaconMesh.visible = true;
-                    this.targetBeaconMesh.position.set(-0.44, 0.905, -0.72);
-                    break;
-                case ExperimentState.SALT_COLLECTED:
-                case ExperimentState.BURNER_INSTRUCTION:
-                    this.targetBeaconMesh.visible = true;
-                    this.targetBeaconMesh.position.set(0.235, 0.925, -0.80);
-                    break;
-                case ExperimentState.BURNER_ON:
-                    this.targetBeaconMesh.visible = true;
-                    this.targetBeaconMesh.position.set(0.15, 1.06, -0.80);
-                    break;
-                default:
-                    this.targetBeaconMesh.visible = false;
-                    break;
-            }
+            this.targetBeaconMesh.visible = false;
         }
 
-        // Update 3D Directional Target Arrow Animation (Feature 3)
-        if (this.targetArrowGroup && this.targetArrowGroup.visible) {
-            this.arrowAnimTime += delta;
-            const targetSample = this.chemicalSamples[this.currentTargetSaltIndex];
-            if (targetSample && targetSample.standPosition) {
-                const bobY = 1.15 + Math.sin(this.arrowAnimTime * 3.5) * 0.016;
-                this.targetArrowGroup.position.set(targetSample.standPosition.x, bobY, targetSample.standPosition.z);
-            }
-            if (this.arrowShaftAndCone) {
-                this.arrowShaftAndCone.rotation.y += delta * 1.5;
-            }
-            if (this.arrowHalo) {
-                const pulse = 1.0 + Math.sin(this.arrowAnimTime * 4) * 0.15;
-                this.arrowHalo.scale.set(pulse, pulse, 1);
-            }
+        // Keep artificial debug arrows hidden
+        if (this.targetArrowGroup) {
+            this.targetArrowGroup.visible = false;
         }
 
         // Update Easter Egg levitation, quantum pulsation, and rotation

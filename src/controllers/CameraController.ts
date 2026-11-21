@@ -100,11 +100,11 @@ export class CameraController {
             this.controls.moveRight(-this.velocity.x * delta);
             this.controls.moveForward(-this.velocity.z * delta);
 
-            // Bounds check
-            if (this.camera.position.x < -3.5) this.camera.position.x = -3.5;
-            if (this.camera.position.x > 3.5) this.camera.position.x = 3.5;
-            if (this.camera.position.z < -2.5) this.camera.position.z = -2.5;
-            if (this.camera.position.z > 2.5) this.camera.position.z = 2.5;
+            // Natural room boundaries (matching 10m x 7.5m laboratory walls without artificial inner limit)
+            if (this.camera.position.x < -4.6) this.camera.position.x = -4.6;
+            if (this.camera.position.x > 4.6) this.camera.position.x = 4.6;
+            if (this.camera.position.z < -3.4) this.camera.position.z = -3.4;
+            if (this.camera.position.z > 3.4) this.camera.position.z = 3.4;
             
             this.camera.position.y = 1.7; // keep height constant
 
