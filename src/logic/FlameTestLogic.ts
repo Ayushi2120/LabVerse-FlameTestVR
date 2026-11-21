@@ -182,13 +182,13 @@ export class FlameTestLogic {
         this.audio = new AudioEngine();
 
         // --- 1. FREESTANDING 3D EXIT VR PEDESTAL KIOSK STAND BESIDE WORKBENCH ---
-        // Positioned beside the front-right of the laboratory table at comfortable arm reach (x = 0.68, y = 1.05, z = -0.45)
-        // Natural ergonomic interaction height (1.05m), comfortable arm's reach from the stationary standing workstation
+        // Positioned beside the front-right corner of the laboratory table (x = 1.45, y = 1.05, z = -0.35)
+        // Natural ergonomic interaction height (1.05m), comfortable arm's reach from the standing workstation
         // Angled cleanly inward and forward to directly face the student standing at the workbench
         this.wallExitVRBtnGroup = new THREE.Group();
         this.wallExitVRBtnGroup.name = "WallExitVRBtnGroup";
-        this.wallExitVRBtnGroup.position.set(0.55, 1.00, -0.38);
-        this.wallExitVRBtnGroup.lookAt(new THREE.Vector3(0.00, 1.00, 0.00)); // Facing toward user standing in front of table
+        this.wallExitVRBtnGroup.position.set(1.45, 1.05, -0.35);
+        this.wallExitVRBtnGroup.lookAt(new THREE.Vector3(0.20, 1.05, 0.15)); // Facing toward user standing in front of table
 
         // Heavy Cast-Metal Pedestal Base resting flat on the laboratory floor (y = 0.00m)
         const standMetalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
@@ -415,7 +415,7 @@ export class FlameTestLogic {
         const hintMat = new THREE.SpriteMaterial({ map: hintTex, transparent: true });
         this.grabHintSprite = new THREE.Sprite(hintMat);
         this.grabHintSprite.scale.set(0.38, 0.05, 1);
-        this.grabHintSprite.position.set(0.00, 1.05, -0.42);
+        this.grabHintSprite.position.set(0.00, 1.05, -0.58);
         this.grabHintSprite.visible = false; // Hidden until safety gloves are equipped
         this.scene.add(this.grabHintSprite);
 
@@ -492,7 +492,7 @@ export class FlameTestLogic {
     private createTargetArrow() {
         this.targetArrowGroup = new THREE.Group();
         this.targetArrowGroup.name = "TargetArrowGroup";
-        this.targetArrowGroup.position.set(-0.26, 1.15, -0.44); // Over Mystery Salt A
+        this.targetArrowGroup.position.set(-0.78, 1.15, -0.65); // Over Mystery Salt A
         this.targetArrowGroup.visible = false;
 
         this.arrowShaftAndCone = new THREE.Group();
@@ -742,13 +742,13 @@ export class FlameTestLogic {
 
     public equipGloves() {
         if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
-            this.showFeedback("Click START EXPERIMENT first!", new THREE.Vector3(-0.46, 1.08, -0.52));
+            this.showFeedback("Click START EXPERIMENT first!", new THREE.Vector3(-1.05, 1.08, -0.48));
             return;
         }
         if (this.areGlovesEquipped) {
             // If wire is held, warn user; otherwise allow unequipping gloves
             if (this.isWireCurrentlyHeld()) {
-                this.showFeedback("Release wire before removing gloves!", new THREE.Vector3(-0.36, 1.08, -0.42));
+                this.showFeedback("Release wire before removing gloves!", new THREE.Vector3(-1.05, 1.08, -0.48));
             } else {
                 this.unequipGloves();
             }
@@ -757,7 +757,7 @@ export class FlameTestLogic {
         this.audio.resume();
         this.areGlovesEquipped = true;
         this.audio.playGrab();
-        this.showFeedback("Safety Gloves Equipped", new THREE.Vector3(-0.46, 1.08, -0.52));
+        this.showFeedback("Safety Gloves Equipped", new THREE.Vector3(-1.05, 1.08, -0.48));
 
         if (this.glovesGroup) {
             // Subtle spring reaction on dispenser box
@@ -778,7 +778,7 @@ export class FlameTestLogic {
         // Reveal wire hint label and guide
         if (this.grabHintSprite && this.currentState === ExperimentState.IDLE) {
             this.grabHintSprite.visible = true;
-            this.grabHintSprite.position.set(0.00, 1.05, -0.42);
+            this.grabHintSprite.position.set(0.00, 1.05, -0.58);
         }
 
         // Show 3D arrow to target salt container (Feature 3)
@@ -789,7 +789,7 @@ export class FlameTestLogic {
         if (!this.areGlovesEquipped) return;
         this.areGlovesEquipped = false;
         this.audio.playBlip();
-        this.showFeedback("Safety Gloves Unequipped", new THREE.Vector3(-0.36, 1.08, -0.42));
+        this.showFeedback("Safety Gloves Unequipped", new THREE.Vector3(-1.05, 1.08, -0.48));
 
         if (this.glovesGroup && typeof this.glovesGroup.userData?.onUnequip === 'function') {
             this.glovesGroup.userData.onUnequip();
@@ -1005,7 +1005,7 @@ export class FlameTestLogic {
             case ExperimentState.IDLE:
                 if (this.grabHintSprite) {
                     this.grabHintSprite.visible = this.areGlovesEquipped;
-                    this.grabHintSprite.position.set(0.00, 1.05, -0.42);
+                    this.grabHintSprite.position.set(0.00, 1.05, -0.58);
                 }
                 if (this.areGlovesEquipped) {
                     this.audio.voice.narrateGrabWire();
@@ -1392,7 +1392,7 @@ export class FlameTestLogic {
 
         // 6. Support raycast click on Nitrile Gloves dispenser
         if (!this.areGlovesEquipped && hasPointer) {
-            const glovesPos = new THREE.Vector3(-0.36, 0.90, -0.42);
+            const glovesPos = new THREE.Vector3(-1.05, 0.90, -0.48);
             if (origin.distanceTo(glovesPos) < 0.35) {
                 this.equipGloves();
                 return;
@@ -1600,7 +1600,7 @@ export class FlameTestLogic {
 
         // 4. Check Nitrile Gloves Dispenser Poke (Equip gloves on direct touch)
         if (!this.areGlovesEquipped) {
-            const glovesPos = FlameTestLogic._scratchGlovesPos.set(-0.36, 0.90, -0.42);
+            const glovesPos = FlameTestLogic._scratchGlovesPos.set(-1.05, 0.90, -0.48);
             if (this.glovesGroup) {
                 this.glovesGroup.getWorldPosition(glovesPos);
             }
@@ -1956,7 +1956,7 @@ export class FlameTestLogic {
         const isWireHeld = this.isWireGrabbedVR || this.isHeldDesktop;
         if (isWireHeld && this.wireGroup) {
             this.releaseBtnGroup.visible = true;
-            this.releaseBtnGroup.position.set(0.00, 0.96, -0.36);
+            this.releaseBtnGroup.position.set(0.00, 0.96, -0.48);
 
             if (this.world && this.world.camera) {
                 const camPos = FlameTestLogic._v1;
@@ -2011,7 +2011,7 @@ export class FlameTestLogic {
         if (this.grabHintSprite) {
             this.grabHintSprite.visible = (this.currentState === ExperimentState.IDLE && this.areGlovesEquipped);
             if (this.grabHintSprite.visible) {
-                this.grabHintSprite.position.set(0.00, 1.05, -0.42);
+                this.grabHintSprite.position.set(0.00, 1.05, -0.58);
             }
         }
 

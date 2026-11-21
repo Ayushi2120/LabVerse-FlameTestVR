@@ -46,8 +46,8 @@ export function createBunsenBurner(materials: MaterialLibrary): THREE.Group {
     group.add(realisticFlame.group);
 
 
-    // Position Bunsen Burner assembly flush on main workbench countertop at comfortable stationary arm reach (52cm)
-    group.position.set(0.16, 0.90, -0.50);
+    // Position Bunsen Burner assembly flush on main workbench countertop at y = 0.90
+    group.position.set(0.15, 0.90, -0.80);
 
     // --- BURNER POWER SWITCH BOX (MOUNTED ON RIGHT SIDE OF BURNER BASE ON WORKBENCH) ---
     const switchGroup = new THREE.Group();
