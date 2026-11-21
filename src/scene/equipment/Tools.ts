@@ -8,7 +8,7 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     // --- 1. PLATINUM WIRE LOOP & HOLDER RACK ---
     const wireGroup = new THREE.Group();
 
-    // Wooden / Metal Rest Holder Rack on desk (Centered in front of user: x = 0.00, z = -0.56)
+    // Wooden / Metal Rest Holder Rack on desk (Centered in front of user: x = 0.00, z = -0.42)
     const rackGroup = new THREE.Group();
     const rackBase = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.06), materials.wood);
     rackBase.position.y = 0.01;
@@ -22,7 +22,7 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     peg2.position.set(0.05, 0.0375, 0);
     rackGroup.add(peg2);
 
-    rackGroup.position.set(0.00, 0.90, -0.56);
+    rackGroup.position.set(0.00, 0.90, -0.42);
     group.add(rackGroup);
 
     // Platinum Wire Instrument
@@ -65,14 +65,14 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     wireGroup.add(loop);
 
     // Position securely on desk rest rack at ergonomic 0.90m table height directly in front of stationary user
-    wireGroup.position.set(0.00, 0.935, -0.56);
+    wireGroup.position.set(0.00, 0.935, -0.42);
     wireGroup.rotation.y = 0.0;
     wireGroup.scale.set(1.2, 1.2, 1.2);
     wireGroup.userData.isGrabbable = true;
     wireGroup.name = "PlatinumWire";
     group.add(wireGroup);
 
-    // --- 2. SMALL PORCELAIN LABORATORY TRAY (Right Rear: x = 0.48, z = -0.74 behind Lab Book) ---
+    // --- 2. SMALL PORCELAIN LABORATORY TRAY (Right Rear: x = 0.42, z = -0.62 behind Lab Book) ---
     const trayGroup = new THREE.Group();
     const trayBase = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.015, 0.16), materials.ceramic);
     trayBase.position.y = 0.0075;
@@ -92,7 +92,7 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     rimR.position.set(0.126, 0.01, 0);
     trayGroup.add(rimR);
 
-    trayGroup.position.set(0.48, 0.90, -0.74);
+    trayGroup.position.set(0.42, 0.90, -0.62);
     group.add(trayGroup);
 
     // --- 3. CRUCIBLE TONGS (STAINLESS STEEL - PLACED NEATLY INSIDE TRAY) ---
@@ -115,7 +115,7 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     pivot.rotation.x = Math.PI / 2;
     tongsGroup.add(pivot);
 
-    tongsGroup.position.set(0.44, 0.915, -0.74);
+    tongsGroup.position.set(0.38, 0.915, -0.62);
     tongsGroup.rotation.x = Math.PI / 2;
     tongsGroup.rotation.z = 0;
     group.add(tongsGroup);
@@ -137,10 +137,10 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     blueStrip.position.set(0.01, 0.006, 0.008);
     litmusGroup.add(blueStrip);
 
-    litmusGroup.position.set(0.54, 0.915, -0.74);
+    litmusGroup.position.set(0.46, 0.915, -0.62);
     group.add(litmusGroup);
 
-    // --- 5. TEST TUBE HOLDER (WOODEN CLAMP PEG - Left Mid: x = -0.60, z = -0.48) ---
+    // --- 5. TEST TUBE HOLDER (WOODEN CLAMP PEG - Left Mid: x = -0.50, z = -0.46) ---
     const clampGroup = new THREE.Group();
     const clampPeg1 = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.16, 0.01), materials.wood);
     clampPeg1.position.set(-0.005, 0, 0);
@@ -156,12 +156,12 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     spring.rotation.z = Math.PI / 2;
     clampGroup.add(spring);
 
-    clampGroup.position.set(-0.60, 0.905, -0.48);
+    clampGroup.position.set(-0.50, 0.905, -0.46);
     clampGroup.rotation.x = Math.PI / 2;
     clampGroup.rotation.z = -Math.PI / 4;
     group.add(clampGroup);
 
-    // --- 6. SAFETY GOGGLES (Left Mid: x = -0.62, z = -0.60) ---
+    // --- 6. SAFETY GOGGLES (Left Mid: x = -0.50, z = -0.58) ---
     const gogglesGroup = new THREE.Group();
     const lens = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.055, 0.018), materials.glass);
     gogglesGroup.add(lens);
@@ -170,14 +170,14 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     frame.position.z = -0.009;
     gogglesGroup.add(frame);
 
-    gogglesGroup.position.set(-0.62, 0.90, -0.60);
+    gogglesGroup.position.set(-0.50, 0.90, -0.58);
     gogglesGroup.rotation.x = -Math.PI / 2;
     group.add(gogglesGroup);
 
-    // --- 7. REALISTIC NITRILE GLOVES STATION (Stationary Arm Reach: x = -0.46, z = -0.52) ---
+    // --- 7. REALISTIC NITRILE GLOVES STATION (Stationary Arm Reach: x = -0.36, z = -0.42) ---
     // Positioned within 55cm natural reach of stationary standing user (effortless left-hand touch/poke)
     const glovesGroup = createRealisticNitrileGlovesStation();
-    glovesGroup.position.set(-0.46, 0.90, -0.52);
+    glovesGroup.position.set(-0.36, 0.90, -0.42);
     glovesGroup.rotation.y = Math.PI / 8;
     group.add(glovesGroup);
 

@@ -63,7 +63,7 @@ export class OrientationScreen3D {
         this.group.name = 'OrientationScreen3D';
 
         // Positioned comfortably in front of user at natural eye height above workbench
-        this.group.position.set(0, 1.55, -1.35);
+        this.group.position.set(0, 1.55, -1.15);
         this.group.rotation.x = -Math.PI / 36; // Subtle 5° ergonomic tilt toward user eye level
 
         this.buildTerminalChassis();
@@ -77,9 +77,9 @@ export class OrientationScreen3D {
     private hasVRPoseInitialized = false;
 
     // Viewport positioning for Desktop vs Meta Quest VR
-    private readonly desktopPos = new THREE.Vector3(0, 1.55, -1.35);
+    private readonly desktopPos = new THREE.Vector3(0, 1.55, -1.15);
     private readonly desktopRot = new THREE.Euler(-Math.PI / 36, 0, 0);
-    private readonly vrUIPos = new THREE.Vector3(0, 1.30, -0.58);
+    private readonly vrUIPos = new THREE.Vector3(0, 1.30, -0.46);
     private readonly vrUIRot = new THREE.Euler(-Math.PI / 36, 0, 0);
     private isVRMode = false;
 
@@ -119,8 +119,8 @@ export class OrientationScreen3D {
             // 4. Scale floating screen to 0.82 so it sits comfortably inside VR headset FOV
             this.group.scale.set(0.82, 0.82, 0.82);
 
-            // 5. Position floating screen comfortably close to user's hands (0.58m: natural arm reach from stationary position)
-            const vrDist = 0.58;
+            // 5. Position floating screen comfortably close to user's hands (0.46m: natural arm reach from stationary position)
+            const vrDist = 0.46;
             if (camPos && camDir && (camPos.lengthSq() > 0.001 || camDir.lengthSq() > 0.001)) {
                 this.hasVRPoseInitialized = true;
                 const horizDir = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();

@@ -92,15 +92,15 @@ export function createChemicalSamples(materials: MaterialLibrary): THREE.Group {
     ];
 
     // Stationary Ergonomic Workstation Layout (table top at y = 0.90)
-    // Compact, non-overlapping 2x3 grid positioned between gloves (x = -0.46) and platinum wire rack (x = 0.00)
-    // All 6 salts are positioned within 40cm to 62cm of the stationary standing user (0.00, 0, -0.22)
+    // Compact, non-overlapping 2x3 grid positioned between gloves (x = -0.36) and platinum wire rack (x = 0.00)
+    // All 6 salts are positioned within 44cm to 61cm of the stationary standing user (0.00, 0, 0.00)
     const standPositions = [
-        new THREE.Vector3(-0.35, 0.90, -0.60), // Salt A (LiCl) - Front Left (52cm reach)
-        new THREE.Vector3(-0.24, 0.90, -0.60), // Salt B (NaCl) - Front Center-Left (45cm reach)
-        new THREE.Vector3(-0.13, 0.90, -0.60), // Salt C (KCl) - Front Inner-Left (40cm reach)
-        new THREE.Vector3(-0.35, 0.90, -0.73), // Salt D (CaCl₂) - Back Left (62cm reach)
-        new THREE.Vector3(-0.24, 0.90, -0.73), // Salt E (CuCl₂) - Back Center-Left (57cm reach)
-        new THREE.Vector3(-0.13, 0.90, -0.73)  // Salt F (SrCl₂) - Back Inner-Left (53cm reach)
+        new THREE.Vector3(-0.26, 0.90, -0.44), // Salt A (LiCl) - Front Left (51cm reach)
+        new THREE.Vector3(-0.16, 0.90, -0.44), // Salt B (NaCl) - Front Center-Left (47cm reach)
+        new THREE.Vector3(-0.06, 0.90, -0.44), // Salt C (KCl) - Front Inner-Left (44cm reach)
+        new THREE.Vector3(-0.26, 0.90, -0.55), // Salt D (CaCl₂) - Rear Left (61cm reach)
+        new THREE.Vector3(-0.16, 0.90, -0.55), // Salt E (CuCl₂) - Rear Center-Left (57cm reach)
+        new THREE.Vector3(-0.06, 0.90, -0.55)  // Salt F (SrCl₂) - Rear Inner-Left (55cm reach)
     ];
 
     // Shared reusable geometries to minimize draw calls and GPU memory on Meta Quest

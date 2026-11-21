@@ -28,14 +28,14 @@ async function init() {
         },
         render: {
             camera: {
-                position: [0, 1.6, -0.22] // Standing eye height offset in front of chemistry workstation
+                position: [0, 1.6, 0] // Standing eye height offset in front of chemistry workstation
             }
         }
     });
 
     // Anchor fixed stationary player rig at central chemistry workstation
     if (world.player) {
-        world.player.position.set(0, 0, -0.22);
+        world.player.position.set(0, 0, 0);
     }
 
     // Optimize depth clipping planes for maximum WebGL depth buffer precision (eliminates Z-fighting across 0.05m-35m room)
@@ -131,7 +131,7 @@ async function init() {
                 } catch { /* ignore */ }
             }
             if (world.player) {
-                (world.player as any).position.set(0, 0, -0.22);
+                (world.player as any).position.set(0, 0, 0);
             }
             if (world.camera) {
                 (world.camera as any).near = 0.05;
@@ -705,9 +705,9 @@ async function init() {
             }
         }
 
-        // Keep stationary player position locked to designated workstation location (0, 0, -0.22)
+        // Keep stationary player position locked to designated workstation location (0, 0, 0)
         if (world.player) {
-            world.player.position.set(0, 0, -0.22);
+            world.player.position.set(0, 0, 0);
         }
     };
 

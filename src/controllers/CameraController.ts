@@ -18,7 +18,7 @@ export class CameraController {
         this.controls = new PointerLockControls(camera, domElement);
         
         // Start position at central workstation
-        this.camera.position.set(0, 1.65, -0.22); // Ergonomic standing eye height in front of chemistry workstation
+        this.camera.position.set(0, 1.65, 0); // Ergonomic standing eye height in front of chemistry workstation
 
         domElement.addEventListener('click', () => {
             if (!this.controls.isLocked) {

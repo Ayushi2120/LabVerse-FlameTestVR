@@ -8,7 +8,7 @@ export function createFurniture(materials: MaterialLibrary): THREE.Group {
     const benchWidth = 2.8;
     const benchDepth = 0.85;
     const benchHeight = 0.90; // Ergonomic standard standing interaction height (0.90m)
-    const benchZ = -0.9;
+    const benchZ = -0.70; // Positioned comfortably close to stationary standing origin (0, 0, 0)
 
     // Main Countertop (Heavy chemical-resistant dark epoxy resin slab with beveled edge)
     const topGeo = new THREE.BoxGeometry(benchWidth + 0.02, 0.05, benchDepth + 0.02);
