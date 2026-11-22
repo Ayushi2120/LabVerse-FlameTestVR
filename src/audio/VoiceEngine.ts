@@ -348,6 +348,11 @@ export class VoiceEngine {
             return;
         }
 
+        // Cancel any active SpeechSynthesis utterance to prevent overlapping
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            try { window.speechSynthesis.cancel(); } catch { /* ignore */ }
+        }
+
         this.cancelCurrentAudio();
 
         this.lastKey = key;
@@ -543,6 +548,13 @@ export class VoiceEngine {
         if (this.synth?.speaking) {
             try { this.synth.cancel(); } catch { /* ignore */ }
         }
+    }
+
+    public stopNarration() {
+        this.isSpeakingSequence = false;
+        this.sequenceQueue = [];
+        this.cancelCurrentAudio();
+        if (this.subtitleEl) this.subtitleEl.style.opacity = '0';
     }
 
     // --- HIGH-LEVEL EXPERIMENT STAGE NARRATION TRIGGERS ---

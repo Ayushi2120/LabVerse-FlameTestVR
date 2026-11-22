@@ -143,6 +143,7 @@ export class FlameTestLogic {
 
     // AI Chemistry Assistant Robot Companion (ATOM-8)
     private atom8Robot!: Atom8Robot;
+    private lastAtom8PinchTime = 0;
 
     // Beginner-Friendly Target Beacon Highlight
     private targetBeaconMesh!: THREE.Mesh;
@@ -655,11 +656,6 @@ export class FlameTestLogic {
 
         // Feature 1 Requirement: Play welcome narration when Start Experiment is activated
         this.audio.voice.narrateWelcomeSequence();
-
-        // ATOM-8 AI Robot Companion welcomes the student warmly
-        if (this.atom8Robot) {
-            this.atom8Robot.welcomeStudent();
-        }
 
         setTimeout(() => {
             this.transitionTo(ExperimentState.IDLE);
@@ -1845,6 +1841,18 @@ export class FlameTestLogic {
                                 }
                             }
 
+                            // ATOM-8 Hand Pinch Gesture Recognition near robot (< 35cm) to open / toggle panel
+                            if (this.atom8Robot && isPinching) {
+                                const robotPos = FlameTestLogic._scratchEggPos;
+                                this.atom8Robot.group.getWorldPosition(robotPos);
+                                const distHandToRobot = indexTipPos.distanceTo(robotPos);
+                                const nowPinch = Date.now();
+                                if (distHandToRobot < 0.35 && (nowPinch - this.lastAtom8PinchTime > 700)) {
+                                    this.lastAtom8PinchTime = nowPinch;
+                                    this.atom8Robot.togglePanel();
+                                }
+                            }
+
                             // Closed fist gesture check
                             const isFistClosed = indexTipPos.distanceTo(wristPos) < 0.13;
 
@@ -2325,9 +2333,9 @@ export class FlameTestLogic {
             // Part 5: Announce observed flame color followed by "Your mystery salt has been identified."
             this.audio.voice.narrateObservationAndIdentify(sample.flameName || sample.formula || sample.name);
 
-            // ATOM-8 AI Robot Companion celebrates identification
+            // ATOM-8 AI Robot Companion celebrates identification silently (zero audio overlap)
             if (this.atom8Robot) {
-                this.atom8Robot.speak(`Identified ${sample.name || sample.formula}! Emitting at ${sample.wavelength || 'characteristic spectral wavelengths'}!`, 'happy');
+                this.atom8Robot.setState('HAPPY');
             }
         }
     }

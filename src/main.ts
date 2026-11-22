@@ -543,14 +543,21 @@ async function init() {
             logicEngine.releaseWire();
             isWireHeld = false;
         } else if (k === 'a' || k === 'c') {
-            // Ask ATOM-8 AI Companion for Next Step
+            // Toggle ATOM-8 AI Companion Panel (Open / Close)
             if (logicEngine.getAtom8Robot()) {
-                logicEngine.getAtom8Robot().handleRequestStep();
+                logicEngine.getAtom8Robot().togglePanel();
             }
         } else if (k === 'h') {
-            // Ask ATOM-8 AI Companion for Hint
+            // Request Hint from ATOM-8
             if (logicEngine.getAtom8Robot()) {
+                if (!logicEngine.getAtom8Robot().isPanelOpen()) {
+                    logicEngine.getAtom8Robot().openPanel();
+                }
                 logicEngine.getAtom8Robot().handleRequestHint();
+            }
+        } else if (e.key === 'Escape') {
+            if (logicEngine.getAtom8Robot() && logicEngine.getAtom8Robot().isPanelOpen()) {
+                logicEngine.getAtom8Robot().closePanel();
             }
         }
         logicEngine.handleKey(e.key);

@@ -59,6 +59,11 @@ export class Atom8Robot {
         action: () => void;
     }[] = [];
 
+    // Panel Visibility & Smooth Animated Transition
+    public isHUDOpen = false;
+    private hudTargetScale = 0.0;
+    private hudCurrentScale = 0.0;
+
     // State & Kinematics
     private currentState: RobotState = 'IDLE';
     private stateTimer = 0;
@@ -300,6 +305,13 @@ export class Atom8Robot {
 
         this.group.add(this.hudGroup);
 
+        // AI panel is completely hidden by default
+        this.hudGroup.visible = false;
+        this.hudGroup.scale.set(0.001, 0.001, 0.001);
+        this.isHUDOpen = false;
+        this.hudTargetScale = 0.0;
+        this.hudCurrentScale = 0.0;
+
         // Setup 3D buttons on the HUD
         this.setupHUDButtons();
 
@@ -310,9 +322,49 @@ export class Atom8Robot {
         // Initialize Speech Recognition if supported
         this.initSpeechRecognition();
 
-        // Default greeting
-        this.currentSpeechText = "Beep-boop! Hello! I'm ATOM-8, your AI Chemistry companion droid. Poke me anytime for guidance or hints!";
+        // Default prompt for when panel opens (zero speech on open)
+        this.currentSpeechText = "Hello scientist! Choose an option below or ask me a Chemistry question:";
         this.updateHUDDisplay();
+    }
+
+    /**
+     * AI Panel Visibility State & Control.
+     */
+    public isPanelOpen(): boolean {
+        return this.isHUDOpen;
+    }
+
+    public openPanel() {
+        if (this.isHUDOpen) return;
+        this.isHUDOpen = true;
+        this.hudTargetScale = 1.0;
+        this.hudGroup.visible = true;
+        this.audio.playBlip();
+        this.updateHUDDisplay();
+        // Crucial requirement: Do NOT trigger AI responses or robot voice simply because the panel opens!
+    }
+
+    public closePanel() {
+        if (!this.isHUDOpen) return;
+        this.isHUDOpen = false;
+        this.hudTargetScale = 0.0;
+        if (this.isSpeaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            try { window.speechSynthesis.cancel(); } catch { /* ignore */ }
+            this.isSpeaking = false;
+        }
+        if (this.currentState === 'QUIZ') {
+            this.currentState = 'IDLE';
+        }
+        this.setState('IDLE');
+        this.audio.playBlip();
+    }
+
+    public togglePanel() {
+        if (this.isHUDOpen) {
+            this.closePanel();
+        } else {
+            this.openPanel();
+        }
     }
 
     /**
@@ -377,6 +429,22 @@ export class Atom8Robot {
                 bounds: { minX: -0.21, maxX: -0.07, minY: -0.15, maxY: -0.11 },
                 action: () => this.exitQuizMode()
             });
+            // Close Button [✕] at top-right in Quiz Mode
+            const quizCloseMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.045, 0.045),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            quizCloseMesh.position.set(0.20, 0.12, 0.005);
+            quizCloseMesh.userData = { isAtom8Button: true, buttonId: 'btn_close' };
+            this.hudGroup.add(quizCloseMesh);
+
+            this.hudButtons.push({
+                id: 'btn_close',
+                mesh: quizCloseMesh,
+                label: "✕",
+                bounds: { minX: 0.17, maxX: 0.23, minY: 0.09, maxY: 0.15 },
+                action: () => this.closePanel()
+            });
         } else {
             // Standard Navigation & Assistant Buttons
             // [ 💬 Next Step ]  [ 💡 Hint ]  [ 🧪 Flame Test ]  [ ❓ Quiz Mode ]  [ 🎤 Voice Ask ]
@@ -404,6 +472,23 @@ export class Atom8Robot {
                     bounds: { minX: cfg.x - cfg.w / 2, maxX: cfg.x + cfg.w / 2, minY: cfg.y - cfg.h / 2, maxY: cfg.y + cfg.h / 2 },
                     action: cfg.action
                 });
+            });
+
+            // Close Button [✕] at top-right in Standard Mode
+            const closeMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.045, 0.045),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            closeMesh.position.set(0.20, 0.12, 0.005);
+            closeMesh.userData = { isAtom8Button: true, buttonId: 'btn_close' };
+            this.hudGroup.add(closeMesh);
+
+            this.hudButtons.push({
+                id: 'btn_close',
+                mesh: closeMesh,
+                label: "✕",
+                bounds: { minX: 0.17, maxX: 0.23, minY: 0.09, maxY: 0.15 },
+                action: () => this.closePanel()
             });
         }
     }
@@ -473,6 +558,9 @@ export class Atom8Robot {
      * Speak response with synthesized voice and procedural droid chirps.
      */
     public speak(text: string, emotion: 'speaking' | 'happy' | 'thinking' | 'question' = 'speaking') {
+        // Stop any running experiment narration so it never overlaps with ATOM-8
+        this.audio.stopAllNarration();
+
         this.currentSpeechText = text;
         this.isSpeaking = true;
         this.setState(emotion === 'happy' ? 'HAPPY' : 'SPEAKING');
@@ -693,12 +781,26 @@ export class Atom8Robot {
         const statusText = this.isSpeaking ? 'SPEAKING 🔊' : this.isListeningVoice ? 'LISTENING 🎤' : this.currentState === 'QUIZ' ? 'QUIZ MODE 📝' : 'ACTIVE ⚡';
         ctx.fillStyle = this.isSpeaking ? '#10b981' : this.isListeningVoice ? '#ec4899' : '#0284c7';
         ctx.beginPath();
-        ctx.roundRect(w - 180, 32, 140, 30, 15);
+        ctx.roundRect(w - 245, 32, 135, 30, 15);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 14px "Inter", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(statusText, w - 110, 52);
+        ctx.fillText(statusText, w - 177, 52);
+
+        // Close Button [✕] in Top Right Corner
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+        ctx.beginPath();
+        ctx.arc(w - 55, 47, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✕', w - 55, 54);
 
         // Divider Line
         ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
@@ -998,19 +1100,26 @@ export class Atom8Robot {
      * Interaction Hit Detection for VR Finger Poke (Meta Quest hand tracking).
      */
     public checkPokeAndInteract(pokePos: THREE.Vector3): boolean {
-        // 1. Check Poke on Robot Body (Poking ATOM-8 triggers cute surprised squeak & greeting!)
         const robotWorldPos = Atom8Robot._scratchV;
         this.group.getWorldPosition(robotWorldPos);
-
         const distToRobot = pokePos.distanceTo(robotWorldPos);
+
+        // 1. If panel is closed, near-field deliberate poke on robot body opens the AI panel smoothly
+        if (!this.isHUDOpen) {
+            if (distToRobot < 0.20) {
+                this.openPanel();
+                return true;
+            }
+            return false;
+        }
+
+        // 2. If panel is open, touching robot body acts as dismiss gesture
         if (distToRobot < 0.16) {
-            this.audio.playDroidChirp('poke');
-            this.setState('HAPPY');
-            this.speak("Beep-whirr! That tickles! How can I assist with your Chemistry practical?", 'happy');
+            this.closePanel();
             return true;
         }
 
-        // 2. Check Poke on HUD Buttons
+        // 3. Check Poke on 3D HUD Buttons (Close button, action buttons, quiz options)
         const localPoke = Atom8Robot._scratchLocalPoke.copy(pokePos);
         this.hudGroup.worldToLocal(localPoke);
 
@@ -1038,12 +1147,24 @@ export class Atom8Robot {
      */
     public handleClick(hitObject: THREE.Object3D): boolean {
         let cur: THREE.Object3D | null = hitObject;
+
+        // If panel is closed, clicking anywhere on the robot body opens the AI panel smoothly
+        if (!this.isHUDOpen) {
+            while (cur) {
+                if (cur === this.bodyGroup || cur.userData?.isRobotBody || cur.userData?.isAtom8Robot || cur === this.group) {
+                    this.openPanel();
+                    return true;
+                }
+                cur = cur.parent;
+            }
+            return false;
+        }
+
+        // If panel is open, handle close button, action buttons, or clicking robot body to dismiss
         while (cur) {
-            // Check Robot Body
-            if (cur === this.bodyGroup || cur.userData?.isRobotBody || cur.userData?.isAtom8Robot) {
-                this.audio.playDroidChirp('poke');
-                this.setState('HAPPY');
-                this.speak("Beep-boop! Need a hint, next step, or ready for a Chemistry Quiz?", 'happy');
+            // Check Close button or Exit button
+            if (cur.userData?.buttonId === 'btn_close' || cur.userData?.isQuizExit) {
+                this.closePanel();
                 return true;
             }
 
@@ -1068,8 +1189,9 @@ export class Atom8Robot {
                 return true;
             }
 
-            if (cur.userData?.isQuizExit) {
-                this.exitQuizMode();
+            // Clicking robot body while open dismisses/closes panel
+            if (cur === this.bodyGroup || cur.userData?.isRobotBody) {
+                this.closePanel();
                 return true;
             }
 
@@ -1154,6 +1276,13 @@ export class Atom8Robot {
         } else if (this.stateTimer % 3 < 0.1) {
             // Periodic idle refresh
             this.renderEyeExpression('idle');
+        }
+
+        // 4. Smooth Animated Scaling for HUD Panel (Open / Close transition)
+        this.hudCurrentScale = THREE.MathUtils.lerp(this.hudCurrentScale, this.hudTargetScale, delta * 12);
+        this.hudGroup.scale.setScalar(this.hudCurrentScale);
+        if (this.hudCurrentScale < 0.015 && !this.isHUDOpen) {
+            this.hudGroup.visible = false;
         }
     }
 }

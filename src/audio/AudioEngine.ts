@@ -63,6 +63,12 @@ export class AudioEngine {
         }
     }
 
+    public stopAllNarration() {
+        if (this.voice) {
+            this.voice.stopNarration();
+        }
+    }
+
     private ensureContext() {
         if (!this.ctx) {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
