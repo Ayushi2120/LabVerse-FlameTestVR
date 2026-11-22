@@ -86,8 +86,8 @@ export class Atom8Robot {
     private audio: AudioEngine;
     private callbacks: Atom8Callbacks;
 
-    // Position & Ergonomics (Near Workstation Bench: x = 0.58m, y = 1.15m, z = -0.52m)
-    private basePosition = new THREE.Vector3(0.58, 1.15, -0.52);
+    // Position & Ergonomics: Positioned neatly beside the test-tube rack (x = -0.38m, y = 1.03m, z = -0.98m)
+    private basePosition = new THREE.Vector3(-0.38, 1.03, -0.98);
 
     // Scratch vector for zero-GC calculations
     private static _scratchV = new THREE.Vector3();
@@ -100,7 +100,8 @@ export class Atom8Robot {
         this.group = new THREE.Group();
         this.group.name = "Atom8Robot";
         this.group.position.copy(this.basePosition);
-        this.group.rotation.y = -0.38; // Gently angled 22 degrees inward to face user standing at (0, 0, 0)
+        this.group.rotation.y = 0.37; // Angled ~21 degrees towards user standing at central workstation (0, 0, 0)
+        this.group.scale.set(0.75, 0.75, 0.75); // Scaled down uniformly to 75% for cute compact companion proportions
         (this.group as any).userData = { isAtom8Robot: true };
 
         // --- 1. MATERIALS ---
@@ -1106,7 +1107,7 @@ export class Atom8Robot {
 
         // 1. If panel is closed, near-field deliberate poke on robot body opens the AI panel smoothly
         if (!this.isHUDOpen) {
-            if (distToRobot < 0.20) {
+            if (distToRobot < 0.16) {
                 this.openPanel();
                 return true;
             }
@@ -1114,7 +1115,7 @@ export class Atom8Robot {
         }
 
         // 2. If panel is open, touching robot body acts as dismiss gesture
-        if (distToRobot < 0.16) {
+        if (distToRobot < 0.13) {
             this.closePanel();
             return true;
         }
