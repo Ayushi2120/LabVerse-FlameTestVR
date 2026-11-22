@@ -14,6 +14,10 @@ import { tintSceneHandMeshes } from './scene/equipment/NitrileGloves';
 
 async function init() {
     const container = document.getElementById('app')!;
+    container.tabIndex = 0;
+    container.addEventListener('pointerdown', () => {
+        container.focus();
+    });
     
     // Create Stationary VR World with natural hand-tracking & grabbing (locomotion systems completely disabled)
     const world = await World.create(container, {
@@ -100,6 +104,12 @@ async function init() {
     let isPointerLocked = false;
     let pitch = 0;
     let yaw = 0;
+    const keysPressed: Record<string, boolean> = {
+        w: false,
+        a: false,
+        s: false,
+        d: false
+    };
 
     // Toast and UI element references
     let toastTimeout: any = null;
@@ -520,11 +530,19 @@ async function init() {
         if (isPointerLocked) e.preventDefault();
     });
 
-    // Keyboard shortcuts ('E' / 'G' for wire toggle, 'Q' for release wire, 'L' for burner, 'R' for reset)
+    // Keyboard shortcuts & WASD Desktop Locomotion
     document.addEventListener('keydown', (e) => {
         logicEngine.getAudioEngine().resume();
-        const expState = logicEngine.getCurrentState();
         const k = e.key.toLowerCase();
+
+        // 1. WASD Movement Keys - Consume immediately, prevent default, and do NOT trigger any UI or experiment actions
+        if (k === 'w' || k === 'a' || k === 's' || k === 'd') {
+            keysPressed[k] = true;
+            e.preventDefault();
+            return;
+        }
+
+        const expState = logicEngine.getCurrentState();
 
         // Block tool shortcuts if experiment hasn't started yet (Feature 1 Gating)
         if (expState === ExperimentState.ORIENTATION || expState === ExperimentState.STARTING) {
@@ -542,8 +560,8 @@ async function init() {
         } else if (k === 'q') {
             logicEngine.releaseWire();
             isWireHeld = false;
-        } else if (k === 'a' || k === 'c') {
-            // Toggle ATOM-8 AI Companion Panel (Open / Close)
+        } else if (k === 'c' || k === 'p') {
+            // Toggle ATOM-8 AI Companion Panel (Open / Close) via 'C' (Companion) or 'P' (Panel)
             if (logicEngine.getAtom8Robot()) {
                 logicEngine.getAtom8Robot().togglePanel();
             }
@@ -556,11 +574,29 @@ async function init() {
                 logicEngine.getAtom8Robot().handleRequestHint();
             }
         } else if (e.key === 'Escape') {
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
             if (logicEngine.getAtom8Robot() && logicEngine.getAtom8Robot().isPanelOpen()) {
                 logicEngine.getAtom8Robot().closePanel();
             }
         }
         logicEngine.handleKey(e.key);
+    });
+
+    document.addEventListener('keyup', (e) => {
+        const k = e.key.toLowerCase();
+        if (k in keysPressed) {
+            keysPressed[k] = false;
+            e.preventDefault();
+        }
+    });
+
+    window.addEventListener('blur', () => {
+        keysPressed.w = false;
+        keysPressed.a = false;
+        keysPressed.s = false;
+        keysPressed.d = false;
     });
 
     // Safe resize handler
@@ -585,6 +621,10 @@ async function init() {
     const frameCenterVec = new THREE.Vector2(0, 0);
     const scratchTargetPos = new THREE.Vector3();
     const wireTargetPos = new THREE.Vector3();
+    const moveForwardScratch = new THREE.Vector3();
+    const moveRightScratch = new THREE.Vector3();
+    const moveDirScratch = new THREE.Vector3();
+    const upVector = new THREE.Vector3(0, 1, 0);
 
     // Hook into world update for logic and crosshair reticle hover
     const originalUpdate = world.update.bind(world);
@@ -724,20 +764,61 @@ async function init() {
             wireGlove.visible = (isWireHeld && isGloved && !isPresentingXR);
         }
 
-        // Desktop HUD Gloves status indicator
+        // Desktop HUD status indicator
         if (hudEl) {
             if (isGloved && !hudEl.dataset.gloved) {
                 hudEl.dataset.gloved = 'true';
-                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>Click</span> Interact &bull; <span>A</span> Companion &bull; <span>H</span> Hint &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>WASD</span> Move &bull; <span>Click</span> Look / Interact &bull; <span>C</span> Companion &bull; <span>H</span> Hint &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
             } else if (!isGloved && hudEl.dataset.gloved) {
                 delete hudEl.dataset.gloved;
-                hudEl.innerHTML = `<span>Stationary Workstation</span> &bull; <span>Click</span> Interact &bull; <span>A</span> Companion &bull; <span>H</span> Hint &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>WASD</span> Move &bull; <span>Click</span> Look / Interact &bull; <span>C</span> Companion &bull; <span>H</span> Hint &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
             }
         }
 
-        // Keep stationary player position locked to designated workstation location (0, 0, 0)
-        if (world.player) {
-            world.player.position.set(0, 0, 0);
+        // Stationary VR Experience in VR mode; smooth WASD navigation in Desktop mode
+        if (isPresentingXR) {
+            if (world.player) {
+                world.player.position.set(0, 0, 0);
+            }
+        } else if (world.player && world.camera) {
+            if (keysPressed.w || keysPressed.a || keysPressed.s || keysPressed.d) {
+                // Get camera horizontal forward direction
+                const forward = moveForwardScratch;
+                (world.camera as any).getWorldDirection(forward);
+                forward.y = 0;
+                if (forward.lengthSq() > 0.0001) {
+                    forward.normalize();
+                } else {
+                    forward.set(0, 0, -1);
+                }
+
+                // Get horizontal right direction
+                const right = moveRightScratch;
+                right.crossVectors(forward, upVector).normalize();
+
+                const moveDir = moveDirScratch.set(0, 0, 0);
+                if (keysPressed.w) moveDir.add(forward);
+                if (keysPressed.s) moveDir.sub(forward);
+                if (keysPressed.d) moveDir.add(right);
+                if (keysPressed.a) moveDir.sub(right);
+
+                if (moveDir.lengthSq() > 0.0001) {
+                    moveDir.normalize();
+                    const moveSpeed = 2.4; // 2.4 m/s natural lab walk speed
+                    const dt = Math.min(delta, 0.1);
+                    (world.player as any).position.addScaledVector(moveDir, moveSpeed * dt);
+
+                    // Room boundary collision: laboratory floor is 10m x 7.5m (x in [-4.2, 4.2], z in [-3.2, 3.2])
+                    (world.player as any).position.x = Math.max(-4.2, Math.min(4.2, (world.player as any).position.x));
+                    (world.player as any).position.z = Math.max(-3.2, Math.min(3.2, (world.player as any).position.z));
+
+                    // Workstation bench collision: bench spans x in [-1.4, 1.4], front edge at z = -0.475m
+                    // Standing player in front of bench cannot walk through table into the burner/tubes
+                    if (Math.abs((world.player as any).position.x) < 1.45 && (world.player as any).position.z < -0.35) {
+                        (world.player as any).position.z = -0.35;
+                    }
+                }
+            }
         }
     };
 
