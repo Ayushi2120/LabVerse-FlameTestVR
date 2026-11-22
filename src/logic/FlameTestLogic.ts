@@ -9,6 +9,7 @@ import { GoldenSnitch } from '../scene/GoldenSnitch';
 import { HogwartsLetter } from '../scene/HogwartsLetter';
 import { MagicalDimension } from '../scene/MagicalDimension';
 import { MagicalParticleSystem } from '../scene/MagicalParticleSystem';
+import { Atom8Robot } from '../scene/Atom8Robot';
 import type { LaboratoryLighting } from '../scene/Lighting';
 
 export type EasterEggDimensionState =
@@ -139,6 +140,9 @@ export class FlameTestLogic {
     private snitchAppearanceTimer = 0;
     private snitchAppearanceCount = 0;
     private hasCaughtSnitch = false;
+
+    // AI Chemistry Assistant Robot Companion (ATOM-8)
+    private atom8Robot!: Atom8Robot;
 
     // Beginner-Friendly Target Beacon Highlight
     private targetBeaconMesh!: THREE.Mesh;
@@ -485,6 +489,21 @@ export class FlameTestLogic {
         });
         this.scene.add(this.goldenSnitch.group);
 
+        // Initialize ATOM-8 AI Chemistry Robot Companion
+        this.atom8Robot = new Atom8Robot(this.audio, {
+            getCurrentExperimentState: () => ({
+                state: this.currentState,
+                saltIndex: this.currentTargetSaltIndex,
+                areGlovesEquipped: this.areGlovesEquipped
+            }),
+            onStepRequested: () => {},
+            onHintRequested: () => {},
+            onQuizCompleted: (_score, _total) => {
+                this.audio.playCorrect();
+            }
+        });
+        this.scene.add(this.atom8Robot.group);
+
         setTimeout(() => this.findReferences(), 100);
     }
 
@@ -636,6 +655,11 @@ export class FlameTestLogic {
 
         // Feature 1 Requirement: Play welcome narration when Start Experiment is activated
         this.audio.voice.narrateWelcomeSequence();
+
+        // ATOM-8 AI Robot Companion welcomes the student warmly
+        if (this.atom8Robot) {
+            this.atom8Robot.welcomeStudent();
+        }
 
         setTimeout(() => {
             this.transitionTo(ExperimentState.IDLE);
@@ -1370,6 +1394,26 @@ export class FlameTestLogic {
             }
         }
 
+        // 3c. Support raycast / pinch click on ATOM-8 AI Robot Companion & 3D HUD
+        if (this.atom8Robot && hasPointer) {
+            const robotPos = new THREE.Vector3();
+            this.atom8Robot.group.getWorldPosition(robotPos);
+            if (origin.distanceTo(robotPos) < 0.45) {
+                if (this.atom8Robot.handleClick(this.atom8Robot.group)) {
+                    return;
+                }
+            }
+
+            const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(quat);
+            raycaster.set(origin, dir);
+            const rHits = raycaster.intersectObjects(this.atom8Robot.group.children, true);
+            if (rHits.length > 0) {
+                if (this.atom8Robot.handleClick(rHits[0].object)) {
+                    return;
+                }
+            }
+        }
+
 
 
         // 5. Support raycast click on Bunsen Burner switch
@@ -1589,6 +1633,12 @@ export class FlameTestLogic {
 
         // 3b. Check 3D Lab Book Poke (Page Turning & Observations Review - Feature 4)
         if (this.labBook && this.labBook.checkPokeAndInteract(pokePos)) {
+            this.lastInteractionTime = now;
+            return;
+        }
+
+        // 3c. Check ATOM-8 AI Robot Companion Poke & 3D HUD (Always active in all states)
+        if (this.atom8Robot && this.atom8Robot.checkPokeAndInteract(pokePos)) {
             this.lastInteractionTime = now;
             return;
         }
@@ -2193,6 +2243,20 @@ export class FlameTestLogic {
         if (this.magicalDimension && this.magicalDimension.isActive()) {
             this.magicalDimension.update(delta);
         }
+
+        // Update ATOM-8 AI Robot Companion (Animations, Kinematics, Head Tracking, Eye Canvas)
+        if (this.atom8Robot) {
+            let camPos: THREE.Vector3 | undefined = undefined;
+            if (this.world && (this.world as any).camera) {
+                camPos = FlameTestLogic._scratchTargetPos;
+                (this.world as any).camera.getWorldPosition(camPos);
+            }
+            this.atom8Robot.update(delta, camPos);
+        }
+    }
+
+    public getAtom8Robot(): Atom8Robot {
+        return this.atom8Robot;
     }
 
     public setLabEnvironment(labLighting: LaboratoryLighting, roomGroup: THREE.Group, _furnitureGroup?: THREE.Group) {
@@ -2260,6 +2324,11 @@ export class FlameTestLogic {
 
             // Part 5: Announce observed flame color followed by "Your mystery salt has been identified."
             this.audio.voice.narrateObservationAndIdentify(sample.flameName || sample.formula || sample.name);
+
+            // ATOM-8 AI Robot Companion celebrates identification
+            if (this.atom8Robot) {
+                this.atom8Robot.speak(`Identified ${sample.name || sample.formula}! Emitting at ${sample.wavelength || 'characteristic spectral wavelengths'}!`, 'happy');
+            }
         }
     }
 

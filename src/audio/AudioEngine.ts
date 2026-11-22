@@ -569,4 +569,155 @@ export class AudioEngine {
             osc.stop(now + i * 0.08 + 0.7);
         });
     }
+
+    /**
+     * ATOM-8 AI Droid Procedural Robotic Sound Synthesizer.
+     * High-fidelity Web Audio API frequency-modulated droid chirps, beeps, and arpeggios.
+     */
+    public playDroidChirp(type: 'welcome' | 'happy' | 'question' | 'thinking' | 'speaking' | 'poke' | 'correct' | 'wrong' = 'happy') {
+        this.ensureContext();
+        if (!this.ctx) return;
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        try {
+            switch (type) {
+                case 'welcome': {
+                    // Playful ascending sci-fi companion greeting arpeggio
+                    const freqs = [587.33, 880.00, 1174.66, 1760.00]; // D5, A5, D6, A6
+                    freqs.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq * 0.9, now + idx * 0.07);
+                        osc.frequency.exponentialRampToValueAtTime(freq, now + idx * 0.07 + 0.05);
+
+                        gain.gain.setValueAtTime(0, now + idx * 0.07);
+                        gain.gain.linearRampToValueAtTime(0.12, now + idx * 0.07 + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.18);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.07);
+                        osc.stop(now + idx * 0.07 + 0.18);
+                    });
+                    break;
+                }
+                case 'happy': {
+                    // Upbeat joyful 5-note melodic droid celebration
+                    const freqs = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6
+                    freqs.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                        osc.frequency.exponentialRampToValueAtTime(freq * 1.05, now + idx * 0.06 + 0.04);
+
+                        gain.gain.setValueAtTime(0, now + idx * 0.06);
+                        gain.gain.linearRampToValueAtTime(0.14, now + idx * 0.06 + 0.015);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.22);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.06);
+                        osc.stop(now + idx * 0.06 + 0.22);
+                    });
+                    break;
+                }
+                case 'question': {
+                    // Curious inquisitive rising chirps with gentle FM vibrato
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(750, now);
+                    osc.frequency.exponentialRampToValueAtTime(1850, now + 0.16);
+
+                    // Gentle modulation
+                    const lfo = ctx.createOscillator();
+                    const lfoGain = ctx.createGain();
+                    lfo.frequency.value = 22;
+                    lfoGain.gain.value = 40;
+                    lfo.connect(osc.frequency);
+                    lfo.start(now);
+                    lfo.stop(now + 0.18);
+
+                    gain.gain.setValueAtTime(0.01, now);
+                    gain.gain.linearRampToValueAtTime(0.12, now + 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                    break;
+                }
+                case 'thinking': {
+                    // Rapid dual-tone data processing blips
+                    for (let i = 0; i < 4; i++) {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'square';
+                        const f = i % 2 === 0 ? 880 : 1320;
+                        osc.frequency.setValueAtTime(f, now + i * 0.05);
+
+                        gain.gain.setValueAtTime(0.04, now + i * 0.05);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.04);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + i * 0.05);
+                        osc.stop(now + i * 0.05 + 0.04);
+                    }
+                    break;
+                }
+                case 'speaking': {
+                    // Soft, warm multi-tonal vocalization syllable
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    const baseF = 440 + Math.random() * 300;
+                    osc.frequency.setValueAtTime(baseF, now);
+                    osc.frequency.exponentialRampToValueAtTime(baseF * (1 + (Math.random() * 0.4 - 0.2)), now + 0.08);
+
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                    break;
+                }
+                case 'poke': {
+                    // Adorable surprised squeak when poked by student
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1400, now);
+                    osc.frequency.exponentialRampToValueAtTime(2200, now + 0.06);
+                    osc.frequency.exponentialRampToValueAtTime(1100, now + 0.14);
+
+                    gain.gain.setValueAtTime(0.02, now);
+                    gain.gain.linearRampToValueAtTime(0.15, now + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                    break;
+                }
+                case 'correct': {
+                    this.playCorrect();
+                    break;
+                }
+                case 'wrong': {
+                    this.playWrong();
+                    break;
+                }
+            }
+        } catch {
+            // Ignore audio context hiccups
+        }
+    }
 }

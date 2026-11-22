@@ -328,6 +328,11 @@ async function init() {
                         break;
                     }
 
+                    // 2c. Check ATOM-8 AI Robot Companion Click (Body, 3D HUD, Quiz buttons)
+                    if (logicEngine.getAtom8Robot() && logicEngine.getAtom8Robot().handleClick(hitObj)) {
+                        break;
+                    }
+
                     // 3. Check Wall Exit VR Button (ALWAYS UNBLOCKED in ALL states)
                     let checkExit: THREE.Object3D | null = hitObj;
                     let isExitVRHit = false;
@@ -537,6 +542,16 @@ async function init() {
         } else if (k === 'q') {
             logicEngine.releaseWire();
             isWireHeld = false;
+        } else if (k === 'a' || k === 'c') {
+            // Ask ATOM-8 AI Companion for Next Step
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestStep();
+            }
+        } else if (k === 'h') {
+            // Ask ATOM-8 AI Companion for Hint
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestHint();
+            }
         }
         logicEngine.handleKey(e.key);
     });
@@ -613,6 +628,14 @@ async function init() {
                         current.name === 'GoldenSnitch' ||
                         current.name === 'SnitchBodyGroup' ||
                         current.userData?.isGoldenSnitch ||
+                        current.name === 'Atom8Robot' ||
+                        current.name === 'Atom8HUDMesh' ||
+                        current.userData?.isAtom8Robot ||
+                        current.userData?.isAtom8HUD ||
+                        current.userData?.isAtom8Button ||
+                        current.userData?.isQuizOption ||
+                        current.userData?.isQuizNext ||
+                        current.userData?.isQuizExit ||
                         current.name === 'HogwartsLetter' ||
                         current.userData?.isHogwartsLetter ||
                         current.userData?.isWaxSeal ||
@@ -698,10 +721,10 @@ async function init() {
         if (hudEl) {
             if (isGloved && !hudEl.dataset.gloved) {
                 hudEl.dataset.gloved = 'true';
-                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>Stationary Workstation</span> &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>🧤 GLOVES EQUIPPED</span> &bull; <span>Click</span> Interact &bull; <span>A</span> Companion &bull; <span>H</span> Hint &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
             } else if (!isGloved && hudEl.dataset.gloved) {
                 delete hudEl.dataset.gloved;
-                hudEl.innerHTML = `<span>Stationary Workstation</span> &bull; <span>Click</span> Interact &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
+                hudEl.innerHTML = `<span>Stationary Workstation</span> &bull; <span>Click</span> Interact &bull; <span>A</span> Companion &bull; <span>H</span> Hint &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor`;
             }
         }
 
@@ -815,6 +838,10 @@ async function init() {
                     break;
                 }
                 if (logicEngine.getLabBook() && logicEngine.getLabBook().handleClick(hitObj, intersects[i].point)) {
+                    handled = true;
+                    break;
+                }
+                if (logicEngine.getAtom8Robot() && (logicEngine.getAtom8Robot().handleClick(hitObj) || logicEngine.getAtom8Robot().isHitByObject(hitObj))) {
                     handled = true;
                     break;
                 }

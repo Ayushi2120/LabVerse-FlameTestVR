@@ -118,6 +118,8 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     tongsGroup.position.set(0.34, 0.915, -0.52);
     tongsGroup.rotation.x = Math.PI / 2;
     tongsGroup.rotation.z = 0;
+    tongsGroup.name = "CrucibleTongsGroup";
+    tongsGroup.userData = { isTongs: true, isLabTool: true, label: "Crucible Tongs: Stainless Steel Tool" };
     group.add(tongsGroup);
 
     // --- 4. LITMUS PAPER BOOKLET & STRIPS (INSIDE TRAY BESIDE TONGS) ---
@@ -138,6 +140,8 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     litmusGroup.add(blueStrip);
 
     litmusGroup.position.set(0.44, 0.915, -0.52);
+    litmusGroup.name = "LitmusBookletGroup";
+    litmusGroup.userData = { isLitmus: true, isLabTool: true, label: "Litmus Paper: pH Indicator Strips" };
     group.add(litmusGroup);
 
     // --- 5. TEST TUBE HOLDER (WOODEN CLAMP PEG - Front Left: x = -0.48, z = -0.50) ---
@@ -159,6 +163,8 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
     clampGroup.position.set(-0.45, 0.905, -0.48);
     clampGroup.rotation.x = Math.PI / 2;
     clampGroup.rotation.z = -Math.PI / 4;
+    clampGroup.name = "TubeHolderGroup";
+    clampGroup.userData = { isClamp: true, isLabTool: true, label: "Test Tube Holder: Hardwood Clamp" };
     group.add(clampGroup);
 
     // --- 6. SAFETY GOGGLES (Front Left: x = -0.75, z = -0.48) ---
@@ -172,6 +178,8 @@ export function createTools(materials: MaterialLibrary): THREE.Group {
 
     gogglesGroup.position.set(-0.75, 0.90, -0.48);
     gogglesGroup.rotation.x = -Math.PI / 2;
+    gogglesGroup.name = "SafetyGogglesGroup";
+    gogglesGroup.userData = { isGoggles: true, isLabTool: true, label: "Safety Goggles: ANSI Z87.1 Certified" };
     group.add(gogglesGroup);
 
     // --- 7. REALISTIC NITRILE GLOVES STATION (Front Far Left: x = -1.05, z = -0.48) ---
