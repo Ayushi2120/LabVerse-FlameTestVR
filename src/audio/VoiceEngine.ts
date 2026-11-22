@@ -552,9 +552,73 @@ export class VoiceEngine {
 
     public stopNarration() {
         this.isSpeakingSequence = false;
+        this.isNarrationPausedForRobot = false;
+        this.pausedNarrationQueue = [];
         this.sequenceQueue = [];
         this.cancelCurrentAudio();
         if (this.subtitleEl) this.subtitleEl.style.opacity = '0';
+    }
+
+    // --- CENTRALIZED AUDIO PRIORITY FOR ATOM-8 COMPANION ---
+    private isNarrationPausedForRobot = false;
+    private pausedNarrationQueue: VoiceStageKey[] = [];
+
+    /**
+     * Centralized Audio Priority: Pauses experiment narration when ATOM-8 speaks.
+     * Returns true if active narration was paused.
+     */
+    public pauseNarrationForRobot(): boolean {
+        const wasActive = this.isSpeakingSequence || Boolean(this.currentAudioEl) || Boolean(this.synth?.speaking);
+        if (!wasActive) return false;
+
+        this.isNarrationPausedForRobot = true;
+        this.pausedNarrationQueue = [...this.sequenceQueue];
+        this.sequenceQueue = [];
+        this.isSpeakingSequence = false;
+
+        if (this.currentAudioEl) {
+            try {
+                this.currentAudioEl.pause();
+            } catch { /* ignore */ }
+            this.currentAudioEl = null;
+        }
+
+        if (this.currentSource) {
+            try {
+                this.currentSource.stop();
+                this.currentSource.disconnect();
+            } catch { /* ignore */ }
+            this.currentSource = null;
+        }
+
+        if (this.synth?.speaking) {
+            try { this.synth.cancel(); } catch { /* ignore */ }
+        }
+
+        if (this.subtitleEl) this.subtitleEl.style.opacity = '0';
+        return true;
+    }
+
+    /**
+     * Resumes experiment narration after ATOM-8 finishes speaking.
+     */
+    public resumeNarrationAfterRobot() {
+        if (!this.isNarrationPausedForRobot) return;
+        this.isNarrationPausedForRobot = false;
+
+        if (this.pausedNarrationQueue.length > 0) {
+            const queueToResume = [...this.pausedNarrationQueue];
+            this.pausedNarrationQueue = [];
+            setTimeout(() => {
+                if (!this.isNarrationPausedForRobot) {
+                    this.speakSequence(queueToResume);
+                }
+            }, 450);
+        }
+    }
+
+    public isNarrationActive(): boolean {
+        return this.isSpeakingSequence || Boolean(this.currentAudioEl) || Boolean(this.synth?.speaking);
     }
 
     // --- HIGH-LEVEL EXPERIMENT STAGE NARRATION TRIGGERS ---

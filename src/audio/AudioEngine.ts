@@ -69,6 +69,16 @@ export class AudioEngine {
         }
     }
 
+    public pauseNarrationForRobot(): boolean {
+        return this.voice ? this.voice.pauseNarrationForRobot() : false;
+    }
+
+    public resumeNarrationAfterRobot() {
+        if (this.voice) {
+            this.voice.resumeNarrationAfterRobot();
+        }
+    }
+
     private ensureContext() {
         if (!this.ctx) {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;

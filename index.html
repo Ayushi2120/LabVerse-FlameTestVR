@@ -129,12 +129,282 @@
       #toast-msg.visible {
         display: block;
       }
+
+      /* ATOM-8 AI Companion Desktop Overlay (Sci-Fi Glassmorphism) */
+      #atom8-toggle-pill {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 8px 16px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1.5px solid rgba(0, 229, 255, 0.4);
+        border-radius: 20px;
+        color: #38bdf8;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        z-index: 90;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition: all 0.2s ease;
+      }
+
+      #atom8-toggle-pill:hover {
+        background: rgba(14, 116, 144, 0.85);
+        border-color: #00e5ff;
+        color: #ffffff;
+        box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+      }
+
+      #atom8-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 360px;
+        max-width: calc(100vw - 40px);
+        background: rgba(10, 16, 28, 0.94);
+        border: 1.5px solid rgba(0, 229, 255, 0.4);
+        border-radius: 18px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 229, 255, 0.18);
+        padding: 16px;
+        box-sizing: border-box;
+        z-index: 150;
+        font-family: 'Inter', sans-serif;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+
+      .atom8-hidden {
+        display: none !important;
+      }
+
+      .atom8-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+      }
+
+      .atom8-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .atom8-badge {
+        font-size: 24px;
+        filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
+      }
+
+      .atom8-name {
+        color: #38bdf8;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .atom8-sub {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .atom8-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .atom8-status {
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        background: #0284c7;
+        color: #ffffff;
+      }
+
+      .atom8-status.speaking {
+        background: #10b981;
+      }
+
+      .atom8-status.listening {
+        background: #ec4899;
+      }
+
+      .atom8-status.thinking {
+        background: #f59e0b;
+      }
+
+      #atom8-close-btn {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: 50%;
+        width: 26px;
+        height: 26px;
+        color: #f87171;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+      }
+
+      #atom8-close-btn:hover {
+        background: rgba(239, 68, 68, 0.85);
+        color: #ffffff;
+      }
+
+      .atom8-speech {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 12px;
+        padding: 12px;
+        color: #f1f5f9;
+        font-size: 13px;
+        line-height: 1.5;
+        max-height: 150px;
+        overflow-y: auto;
+        margin-bottom: 12px;
+        word-break: break-word;
+      }
+
+      .atom8-actions {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .atom8-chip {
+        padding: 7px 6px;
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .atom8-chip:hover {
+        background: rgba(2, 132, 199, 0.5);
+        border-color: #38bdf8;
+        color: #ffffff;
+      }
+
+      .atom8-input-row {
+        display: flex;
+        gap: 6px;
+      }
+
+      #atom8-input {
+        flex: 1;
+        padding: 8px 12px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1.5px solid rgba(56, 189, 248, 0.4);
+        border-radius: 10px;
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 12.5px;
+        outline: none;
+      }
+
+      #atom8-input:focus {
+        border-color: #00e5ff;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+      }
+
+      #atom8-send-btn {
+        padding: 8px 14px;
+        background: #0284c7;
+        border: 1px solid #38bdf8;
+        border-radius: 10px;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+
+      #atom8-send-btn:hover {
+        background: #0369a1;
+      }
+
+      #atom8-voice-btn {
+        padding: 8px 12px;
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 10px;
+        color: #ffffff;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      #atom8-voice-btn:hover {
+        background: rgba(236, 72, 153, 0.5);
+        border-color: #ec4899;
+      }
     </style>
   </head>
   <body>
     <div id="app" tabindex="0"></div>
     <div id="crosshair"></div>
     <div id="toast-msg"></div>
+
+    <!-- Collapsible ATOM-8 Desktop AI Panel -->
+    <div id="atom8-panel" class="atom8-hidden">
+      <div class="atom8-header">
+        <div class="atom8-title">
+          <span class="atom8-badge">🤖</span>
+          <div>
+            <div class="atom8-name">ATOM-8</div>
+            <div class="atom8-sub">AI Chemistry Companion</div>
+          </div>
+        </div>
+        <div class="atom8-header-actions">
+          <span id="atom8-status-pill" class="atom8-status">ACTIVE</span>
+          <button id="atom8-close-btn" title="Close Companion Panel (Esc)">✕</button>
+        </div>
+      </div>
+      
+      <div id="atom8-speech-box" class="atom8-speech">
+        Hello scientist! Choose an action or ask me any question about the flame test experiment:
+      </div>
+
+      <div class="atom8-actions">
+        <button id="atom8-btn-step" class="atom8-chip" title="Next step guidance">💬 Next Step</button>
+        <button id="atom8-btn-hint" class="atom8-chip" title="Progressive hint">💡 Hint</button>
+        <button id="atom8-btn-flame" class="atom8-chip" title="Explain flame test">🧪 Flame Test</button>
+        <button id="atom8-btn-theory" class="atom8-chip" title="Quantum transition theory">⚛️ Theory</button>
+        <button id="atom8-btn-quiz" class="atom8-chip" title="Interactive chemistry quiz">❓ Quiz</button>
+      </div>
+
+      <div class="atom8-input-row">
+        <input id="atom8-input" type="text" placeholder="Ask ATOM-8 a chemistry question..." />
+        <button id="atom8-send-btn" title="Send question">Ask</button>
+        <button id="atom8-voice-btn" title="Toggle voice listening">🎤</button>
+      </div>
+    </div>
+
+    <!-- Toggle button for quick access -->
+    <button id="atom8-toggle-pill" title="Toggle ATOM-8 AI Assistant (Hotkey: C)">
+      🤖 ATOM-8 AI
+    </button>
+
     <div id="desktop-hud">
       <span>WASD</span> Move &bull; <span>Click</span> Look / Interact &bull; <span>C</span> Companion &bull; <span>H</span> Hint &bull; <span>Q</span> Release Wire &bull; <span>Esc</span> Cursor
     </div>

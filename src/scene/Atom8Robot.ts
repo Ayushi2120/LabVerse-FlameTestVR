@@ -10,7 +10,10 @@
 
 import * as THREE from 'three';
 import { AudioEngine } from '../audio/AudioEngine';
-import { ChemistryKnowledge, QUIZ_QUESTIONS } from '../ai/ChemistryKnowledge';
+import { QUIZ_QUESTIONS } from '../ai/ChemistryKnowledge';
+import type { QuizQuestion } from '../ai/ChemistryKnowledge';
+import { Atom8AIClient } from '../ai/Atom8AIClient';
+import type { AIQuizQuestion } from '../ai/Atom8AIClient';
 
 export type RobotState = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'HAPPY' | 'QUIZ';
 
@@ -18,7 +21,19 @@ export interface Atom8Callbacks {
     onStepRequested?: () => void;
     onHintRequested?: () => void;
     onQuizCompleted?: (score: number, total: number) => void;
-    getCurrentExperimentState?: () => { state: string; saltIndex: number; areGlovesEquipped: boolean };
+    onPanelVisibilityChanged?: (isOpen: boolean) => void;
+    onSpeechUpdated?: (text: string) => void;
+    getCurrentExperimentState?: () => {
+        state: string;
+        saltIndex: number;
+        areGlovesEquipped: boolean;
+        currentSaltLetter?: string;
+        currentSaltName?: string;
+        currentSaltFormula?: string;
+        observedFlameColor?: string;
+        completedSalts?: string[];
+        isBurnerLit?: boolean;
+    };
 }
 
 export class Atom8Robot {
@@ -70,6 +85,10 @@ export class Atom8Robot {
     private animTime = 0;
     private currentSpeechText = "";
     private isSpeaking = false;
+
+    // AI Integration Client
+    private aiClient = new Atom8AIClient();
+    private activeQuizQuestions: (AIQuizQuestion | QuizQuestion)[] = [...QUIZ_QUESTIONS];
 
     // Quiz State
     private currentQuizQuestionIndex = 0;
@@ -342,6 +361,9 @@ export class Atom8Robot {
         this.hudGroup.visible = true;
         this.audio.playBlip();
         this.updateHUDDisplay();
+        if (this.callbacks.onPanelVisibilityChanged) {
+            this.callbacks.onPanelVisibilityChanged(true);
+        }
         // Crucial requirement: Do NOT trigger AI responses or robot voice simply because the panel opens!
     }
 
@@ -352,12 +374,16 @@ export class Atom8Robot {
         if (this.isSpeaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
             try { window.speechSynthesis.cancel(); } catch { /* ignore */ }
             this.isSpeaking = false;
+            this.audio.resumeNarrationAfterRobot();
         }
         if (this.currentState === 'QUIZ') {
             this.currentState = 'IDLE';
         }
         this.setState('IDLE');
         this.audio.playBlip();
+        if (this.callbacks.onPanelVisibilityChanged) {
+            this.callbacks.onPanelVisibilityChanged(false);
+        }
     }
 
     public togglePanel() {
@@ -377,7 +403,7 @@ export class Atom8Robot {
         if (this.currentState === 'QUIZ') {
             // Quiz Mode Buttons: [Option A], [Option B], [Option C], [Option D], [Next / Finish]
             const optY = [0.03, -0.02, -0.07, -0.12];
-            const q = QUIZ_QUESTIONS[this.currentQuizQuestionIndex];
+            const q = this.activeQuizQuestions[this.currentQuizQuestionIndex];
 
             for (let i = 0; i < 4; i++) {
                 const btnMesh = new THREE.Mesh(
@@ -409,7 +435,7 @@ export class Atom8Robot {
             this.hudButtons.push({
                 id: 'quiz_next',
                 mesh: nextMesh,
-                label: this.quizAnswered ? (this.currentQuizQuestionIndex < QUIZ_QUESTIONS.length - 1 ? "Next ➡️" : "Finish 🎉") : "Skip",
+                label: this.quizAnswered ? (this.currentQuizQuestionIndex < this.activeQuizQuestions.length - 1 ? "Next ➡️" : "Finish 🎉") : "Skip",
                 bounds: { minX: 0.03, maxX: 0.21, minY: -0.15, maxY: -0.11 },
                 action: () => this.handleQuizNext()
             });
@@ -448,13 +474,15 @@ export class Atom8Robot {
             });
         } else {
             // Standard Navigation & Assistant Buttons
-            // [ 💬 Next Step ]  [ 💡 Hint ]  [ 🧪 Flame Test ]  [ ❓ Quiz Mode ]  [ 🎤 Voice Ask ]
+            // Row 1: [ 💬 Next Step ]  [ 💡 Give Hint ]  [ 🧪 Explain Flame ]
+            // Row 2: [ ⚛️ Theory Mode ]  [ ❓ Chemistry Quiz ]  [ 🎤 Voice Ask ]
             const btnConfigs = [
                 { id: 'btn_step', label: "💬 Next Step", x: -0.16, y: -0.06, w: 0.14, h: 0.045, action: () => this.handleRequestStep() },
                 { id: 'btn_hint', label: "💡 Give Hint", x: 0.00, y: -0.06, w: 0.14, h: 0.045, action: () => this.handleRequestHint() },
-                { id: 'btn_flame', label: "🧪 Flame Test", x: 0.16, y: -0.06, w: 0.14, h: 0.045, action: () => this.handleExplainFlame() },
-                { id: 'btn_quiz', label: "❓ Chemistry Quiz", x: -0.10, y: -0.115, w: 0.18, h: 0.042, action: () => this.startQuizMode() },
-                { id: 'btn_voice', label: "🎤 Voice Ask", x: 0.10, y: -0.115, w: 0.18, h: 0.042, action: () => this.toggleVoiceListening() }
+                { id: 'btn_flame', label: "🧪 Explain Flame", x: 0.16, y: -0.06, w: 0.14, h: 0.045, action: () => this.handleExplainFlame() },
+                { id: 'btn_theory', label: "⚛️ Theory", x: -0.16, y: -0.115, w: 0.14, h: 0.045, action: () => this.handleRequestTheory() },
+                { id: 'btn_quiz', label: "❓ Chemistry Quiz", x: 0.00, y: -0.115, w: 0.14, h: 0.045, action: () => this.startQuizMode() },
+                { id: 'btn_voice', label: "🎤 Voice Ask", x: 0.16, y: -0.115, w: 0.14, h: 0.045, action: () => this.toggleVoiceListening() }
             ];
 
             btnConfigs.forEach(cfg => {
@@ -539,28 +567,26 @@ export class Atom8Robot {
     }
 
     /**
-     * Process student query (from voice recognition or topic button).
+     * Process student query (from voice recognition, text input, or topic button).
      */
-    public processUserQuery(query: string) {
+    public async processUserQuery(query: string) {
+        if (!query || !query.trim()) return;
         this.setState('THINKING');
         this.audio.playDroidChirp('thinking');
-        this.currentSpeechText = `Thinking: "${query}"...`;
+        this.currentSpeechText = `Analyzing: "${query.trim()}"...`;
         this.updateHUDDisplay();
 
-        setTimeout(() => {
-            const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
-            const answer = ChemistryKnowledge.answerQuestion(query, exp.state, exp.saltIndex);
-
-            this.speak(answer.reply, answer.emotion);
-        }, 600);
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const res = await this.aiClient.askAI(query.trim(), 'ask', exp as any);
+        this.speak(res.reply, res.emotion);
     }
 
     /**
      * Speak response with synthesized voice and procedural droid chirps.
      */
     public speak(text: string, emotion: 'speaking' | 'happy' | 'thinking' | 'question' = 'speaking') {
-        // Stop any running experiment narration so it never overlaps with ATOM-8
-        this.audio.stopAllNarration();
+        // Centralized Audio Priority: Pause any running experiment narration
+        this.audio.pauseNarrationForRobot();
 
         this.currentSpeechText = text;
         this.isSpeaking = true;
@@ -571,6 +597,10 @@ export class Atom8Robot {
 
         // Update 3D Holographic Display
         this.updateHUDDisplay();
+
+        if (this.callbacks.onSpeechUpdated) {
+            this.callbacks.onSpeechUpdated(text);
+        }
 
         // Web Speech API Synthesis with cute high-pitch robotic voice
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -586,31 +616,30 @@ export class Atom8Robot {
                 const robotVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Zira')));
                 if (robotVoice) utter.voice = robotVoice;
 
-                utter.onend = () => {
+                const onDone = () => {
                     this.isSpeaking = false;
                     if (this.currentState !== 'QUIZ') {
                         this.setState('IDLE');
                     }
+                    this.audio.resumeNarrationAfterRobot();
                 };
-                utter.onerror = () => {
-                    this.isSpeaking = false;
-                    if (this.currentState !== 'QUIZ') {
-                        this.setState('IDLE');
-                    }
-                };
+
+                utter.onend = onDone;
+                utter.onerror = onDone;
 
                 window.speechSynthesis.speak(utter);
             } catch {
-                // Speech synthesis fallback
                 setTimeout(() => {
                     this.isSpeaking = false;
                     if (this.currentState !== 'QUIZ') this.setState('IDLE');
+                    this.audio.resumeNarrationAfterRobot();
                 }, Math.max(2500, text.length * 55));
             }
         } else {
             setTimeout(() => {
                 this.isSpeaking = false;
                 if (this.currentState !== 'QUIZ') this.setState('IDLE');
+                this.audio.resumeNarrationAfterRobot();
             }, Math.max(2500, text.length * 55));
         }
     }
@@ -813,13 +842,13 @@ export class Atom8Robot {
 
         if (this.currentState === 'QUIZ') {
             // Render Quiz UI
-            const q = QUIZ_QUESTIONS[this.currentQuizQuestionIndex];
+            const q = this.activeQuizQuestions[this.currentQuizQuestionIndex];
             if (q) {
                 // Question Header
                 ctx.fillStyle = '#fbbf24';
                 ctx.font = 'bold 20px "Inter", sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText(`Question ${this.currentQuizQuestionIndex + 1} of ${QUIZ_QUESTIONS.length} • Score: ${this.quizScore}`, 42, 105);
+                ctx.fillText(`Question ${this.currentQuizQuestionIndex + 1} of ${this.activeQuizQuestions.length} • Score: ${this.quizScore}`, 42, 105);
 
                 // Question Text (Word Wrapped)
                 ctx.fillStyle = '#ffffff';
@@ -887,7 +916,7 @@ export class Atom8Robot {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 18px "Inter", sans-serif';
                 ctx.textAlign = 'center';
-                const nextLabel = this.quizAnswered ? (this.currentQuizQuestionIndex < QUIZ_QUESTIONS.length - 1 ? 'Next Question ➡️' : 'Complete Quiz 🎉') : 'Skip ⏩';
+                const nextLabel = this.quizAnswered ? (this.currentQuizQuestionIndex < this.activeQuizQuestions.length - 1 ? 'Next Question ➡️' : 'Complete Quiz 🎉') : 'Skip ⏩';
                 ctx.fillText(nextLabel, w - 142, 438);
 
                 // Exit
@@ -906,17 +935,17 @@ export class Atom8Robot {
             ctx.textAlign = 'left';
             this.wrapText(ctx, this.currentSpeechText, 42, 115, w - 84, 32);
 
-            // Action Buttons Row 1: [ 💬 Next Step ]  [ 💡 Give Hint ]  [ 🧪 Flame Test ]
+            // Action Buttons Row 1: [ 💬 Next Step ]  [ 💡 Give Hint ]  [ 🧪 Explain Flame ]
             const row1 = [
                 { label: '💬 Next Step', x: 42, w: 215, bg: '#0284c7' },
                 { label: '💡 Give Hint', x: 275, w: 215, bg: '#d97706' },
-                { label: '🧪 Flame Test', x: 508, w: 215, bg: '#7c3aed' }
+                { label: '🧪 Explain Flame', x: 508, w: 215, bg: '#7c3aed' }
             ];
 
             row1.forEach(btn => {
                 ctx.fillStyle = btn.bg;
                 ctx.beginPath();
-                ctx.roundRect(btn.x, 310, btn.w, 54, 12);
+                ctx.roundRect(btn.x, 312, btn.w, 52, 12);
                 ctx.fill();
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 1.5;
@@ -925,19 +954,20 @@ export class Atom8Robot {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px "Inter", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(btn.label, btn.x + btn.w / 2, 344);
+                ctx.fillText(btn.label, btn.x + btn.w / 2, 345);
             });
 
-            // Action Buttons Row 2: [ ❓ Chemistry Quiz ]  [ 🎤 Voice Ask ]
+            // Action Buttons Row 2: [ ⚛️ Theory Mode ]  [ ❓ Chemistry Quiz ]  [ 🎤 Voice Ask ]
             const row2 = [
-                { label: '❓ Chemistry Quiz', x: 100, w: 260, bg: '#059669' },
-                { label: this.isListeningVoice ? '🔴 Listening...' : '🎤 Voice Ask', x: 400, w: 260, bg: this.isListeningVoice ? '#dc2626' : '#2563eb' }
+                { label: '⚛️ Theory Mode', x: 42, w: 215, bg: '#0891b2' },
+                { label: '❓ Quiz Mode', x: 275, w: 215, bg: '#059669' },
+                { label: this.isListeningVoice ? '🔴 Listening...' : '🎤 Voice Ask', x: 508, w: 215, bg: this.isListeningVoice ? '#dc2626' : '#2563eb' }
             ];
 
             row2.forEach(btn => {
                 ctx.fillStyle = btn.bg;
                 ctx.beginPath();
-                ctx.roundRect(btn.x, 382, btn.w, 56, 12);
+                ctx.roundRect(btn.x, 382, btn.w, 52, 12);
                 ctx.fill();
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 1.5;
@@ -946,7 +976,7 @@ export class Atom8Robot {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px "Inter", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(btn.label, btn.x + btn.w / 2, 417);
+                ctx.fillText(btn.label, btn.x + btn.w / 2, 415);
             });
         }
 
@@ -976,20 +1006,54 @@ export class Atom8Robot {
     /**
      * Handlers for interactive actions.
      */
-    public handleRequestStep() {
+    public async handleRequestStep() {
+        this.setState('THINKING');
+        this.audio.playDroidChirp('thinking');
+        this.currentSpeechText = "Determining your next experiment step...";
+        this.updateHUDDisplay();
+
         const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
-        const guidance = ChemistryKnowledge.getStepGuidance(exp.state, exp.saltIndex, exp.areGlovesEquipped);
-        this.speak(`${guidance.title}: ${guidance.text}`, 'speaking');
+        const res = await this.aiClient.askAI('', 'step', exp as any);
+        this.speak(res.reply, res.emotion);
+        if (this.callbacks.onStepRequested) {
+            this.callbacks.onStepRequested();
+        }
     }
 
-    public handleRequestHint() {
+    public async handleRequestHint() {
+        this.setState('THINKING');
+        this.audio.playDroidChirp('thinking');
+        this.currentSpeechText = "Formulating a helpful hint...";
+        this.updateHUDDisplay();
+
         const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
-        const hint = ChemistryKnowledge.getProgressiveHint(exp.saltIndex, 1);
-        this.speak(`Here is a helpful hint: ${hint}`, 'thinking');
+        const res = await this.aiClient.askAI('', 'hint', exp as any);
+        this.speak(res.reply, res.emotion);
+        if (this.callbacks.onHintRequested) {
+            this.callbacks.onHintRequested();
+        }
     }
 
-    public handleExplainFlame() {
-        this.speak("In a flame test, thermal energy excites metal valence electrons to higher energy levels. When they relax back to ground state, they release distinct wavelengths: ΔE = hc/λ!", 'happy');
+    public async handleExplainFlame() {
+        this.setState('THINKING');
+        this.audio.playDroidChirp('thinking');
+        this.currentSpeechText = "Analyzing flame emission spectroscopy...";
+        this.updateHUDDisplay();
+
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const res = await this.aiClient.askAI('', 'explain', exp as any);
+        this.speak(res.reply, res.emotion);
+    }
+
+    public async handleRequestTheory() {
+        this.setState('THINKING');
+        this.audio.playDroidChirp('thinking');
+        this.currentSpeechText = "Connecting quantum transitions & Planck's relation...";
+        this.updateHUDDisplay();
+
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const res = await this.aiClient.askAI('', 'theory', exp as any);
+        this.speak(res.reply, res.emotion);
     }
 
     public toggleVoiceListening() {
@@ -1010,15 +1074,28 @@ export class Atom8Robot {
         }
     }
 
-    public startQuizMode() {
+    public async startQuizMode() {
         this.currentState = 'QUIZ';
         this.currentQuizQuestionIndex = 0;
         this.quizScore = 0;
         this.quizAnswered = false;
         this.quizSelectedOption = null;
-        this.quizFeedbackText = "";
+        this.quizFeedbackText = "Generating dynamic chemistry quiz...";
+        this.updateHUDDisplay();
 
-        // Re-setup buttons for Quiz Mode
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        try {
+            const dynamicQuestion = await this.aiClient.generateDynamicQuiz(exp as any);
+            if (dynamicQuestion) {
+                this.activeQuizQuestions = [dynamicQuestion, ...QUIZ_QUESTIONS];
+            } else {
+                this.activeQuizQuestions = [...QUIZ_QUESTIONS];
+            }
+        } catch {
+            this.activeQuizQuestions = [...QUIZ_QUESTIONS];
+        }
+
+        this.quizFeedbackText = "";
         this.setupHUDButtons();
         this.speak("Starting Chemistry Quiz! Poke or click the best answer for each question!", 'happy');
     }
@@ -1033,7 +1110,7 @@ export class Atom8Robot {
 
     private handleQuizAnswer(optIndex: number) {
         if (this.quizAnswered) return;
-        const q = QUIZ_QUESTIONS[this.currentQuizQuestionIndex];
+        const q = this.activeQuizQuestions[this.currentQuizQuestionIndex];
         if (!q) return;
 
         this.quizAnswered = true;
@@ -1055,7 +1132,7 @@ export class Atom8Robot {
     }
 
     private handleQuizNext() {
-        if (this.currentQuizQuestionIndex < QUIZ_QUESTIONS.length - 1) {
+        if (this.currentQuizQuestionIndex < this.activeQuizQuestions.length - 1) {
             this.currentQuizQuestionIndex++;
             this.quizAnswered = false;
             this.quizSelectedOption = null;
@@ -1066,13 +1143,17 @@ export class Atom8Robot {
         } else {
             // Quiz Complete
             const finalScore = this.quizScore;
-            const total = QUIZ_QUESTIONS.length;
+            const total = this.activeQuizQuestions.length;
             this.speak(`Quiz Complete! 🎉 You scored ${finalScore} out of ${total}! Excellent work, scientist!`, 'happy');
             if (this.callbacks.onQuizCompleted) {
                 this.callbacks.onQuizCompleted(finalScore, total);
             }
             setTimeout(() => this.exitQuizMode(), 4000);
         }
+    }
+
+    public getAIClient(): Atom8AIClient {
+        return this.aiClient;
     }
 
     /**

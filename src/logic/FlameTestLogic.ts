@@ -492,15 +492,34 @@ export class FlameTestLogic {
 
         // Initialize ATOM-8 AI Chemistry Robot Companion
         this.atom8Robot = new Atom8Robot(this.audio, {
-            getCurrentExperimentState: () => ({
-                state: this.currentState,
-                saltIndex: this.currentTargetSaltIndex,
-                areGlovesEquipped: this.areGlovesEquipped
-            }),
+            getCurrentExperimentState: () => {
+                const sample = this.chemicalSamples?.[this.currentTargetSaltIndex];
+                return {
+                    state: this.currentState,
+                    saltIndex: this.currentTargetSaltIndex,
+                    areGlovesEquipped: this.areGlovesEquipped,
+                    currentSaltLetter: sample?.letter || String.fromCharCode(65 + this.currentTargetSaltIndex),
+                    currentSaltName: sample?.name,
+                    currentSaltFormula: sample?.formula,
+                    observedFlameColor: sample?.flameName,
+                    completedSalts: Array.from(this.completedSalts),
+                    isBurnerLit: this.isBurnerOn
+                };
+            },
             onStepRequested: () => {},
             onHintRequested: () => {},
             onQuizCompleted: (_score, _total) => {
                 this.audio.playCorrect();
+            },
+            onPanelVisibilityChanged: (isOpen: boolean) => {
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('atom8-panel-change', { detail: { isOpen } }));
+                }
+            },
+            onSpeechUpdated: (text: string) => {
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('atom8-speech-update', { detail: { text } }));
+                }
             }
         });
         this.scene.add(this.atom8Robot.group);

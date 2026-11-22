@@ -532,6 +532,17 @@ async function init() {
 
     // Keyboard shortcuts & WASD Desktop Locomotion
     document.addEventListener('keydown', (e) => {
+        // If typing inside an input or textarea element, do not capture keyboard for movement or shortcuts
+        if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') {
+            if (e.key === 'Escape') {
+                (e.target as HTMLElement).blur();
+                if (logicEngine.getAtom8Robot() && logicEngine.getAtom8Robot().isPanelOpen()) {
+                    logicEngine.getAtom8Robot().closePanel();
+                }
+            }
+            return;
+        }
+
         logicEngine.getAudioEngine().resume();
         const k = e.key.toLowerCase();
 
@@ -987,6 +998,148 @@ async function init() {
             world.camera.rotation.set(pitch, yaw, 0, 'YXZ');
         }
     });
+
+    // --- ATOM-8 Desktop AI Panel Synchronization & Interaction ---
+    const atom8Panel = document.getElementById('atom8-panel');
+    const atom8ToggleBtn = document.getElementById('atom8-toggle-pill');
+    const atom8CloseBtn = document.getElementById('atom8-close-btn');
+    const atom8SpeechBox = document.getElementById('atom8-speech-box');
+    const atom8StatusPill = document.getElementById('atom8-status-pill');
+    const atom8BtnStep = document.getElementById('atom8-btn-step');
+    const atom8BtnHint = document.getElementById('atom8-btn-hint');
+    const atom8BtnFlame = document.getElementById('atom8-btn-flame');
+    const atom8BtnTheory = document.getElementById('atom8-btn-theory');
+    const atom8BtnQuiz = document.getElementById('atom8-btn-quiz');
+    const atom8Input = document.getElementById('atom8-input') as HTMLInputElement | null;
+    const atom8SendBtn = document.getElementById('atom8-send-btn');
+    const atom8VoiceBtn = document.getElementById('atom8-voice-btn');
+
+    const updateDesktopPanelVisibility = (isOpen: boolean) => {
+        if (!atom8Panel) return;
+        if (isOpen) {
+            atom8Panel.classList.remove('atom8-hidden');
+            if (atom8ToggleBtn) atom8ToggleBtn.style.display = 'none';
+        } else {
+            atom8Panel.classList.add('atom8-hidden');
+            if (atom8ToggleBtn) atom8ToggleBtn.style.display = 'block';
+        }
+    };
+
+    window.addEventListener('atom8-panel-change', ((e: CustomEvent) => {
+        updateDesktopPanelVisibility(e.detail?.isOpen ?? false);
+        if (atom8StatusPill) {
+            atom8StatusPill.textContent = e.detail?.isOpen ? 'ACTIVE' : 'IDLE';
+            atom8StatusPill.className = 'atom8-status';
+        }
+    }) as EventListener);
+
+    window.addEventListener('atom8-speech-update', ((e: CustomEvent) => {
+        if (atom8SpeechBox && e.detail?.text) {
+            atom8SpeechBox.textContent = e.detail.text;
+        }
+        if (atom8StatusPill) {
+            atom8StatusPill.textContent = 'SPEAKING';
+            atom8StatusPill.className = 'atom8-status speaking';
+        }
+    }) as EventListener);
+
+    if (atom8ToggleBtn) {
+        atom8ToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().togglePanel();
+            }
+        });
+    }
+
+    if (atom8CloseBtn) {
+        atom8CloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().closePanel();
+            }
+        });
+    }
+
+    if (atom8BtnStep) {
+        atom8BtnStep.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestStep();
+            }
+        });
+    }
+
+    if (atom8BtnHint) {
+        atom8BtnHint.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestHint();
+            }
+        });
+    }
+
+    if (atom8BtnFlame) {
+        atom8BtnFlame.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleExplainFlame();
+            }
+        });
+    }
+
+    if (atom8BtnTheory) {
+        atom8BtnTheory.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestTheory();
+            }
+        });
+    }
+
+    if (atom8BtnQuiz) {
+        atom8BtnQuiz.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().startQuizMode();
+            }
+        });
+    }
+
+    const sendUserQuery = () => {
+        if (!atom8Input || !atom8Input.value.trim()) return;
+        const query = atom8Input.value.trim();
+        atom8Input.value = '';
+        if (logicEngine.getAtom8Robot()) {
+            logicEngine.getAtom8Robot().processUserQuery(query);
+        }
+    };
+
+    if (atom8SendBtn) {
+        atom8SendBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sendUserQuery();
+        });
+    }
+
+    if (atom8Input) {
+        atom8Input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                sendUserQuery();
+            }
+        });
+    }
+
+    if (atom8VoiceBtn) {
+        atom8VoiceBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().toggleVoiceListening();
+            }
+        });
+    }
 }
 
 init().catch(console.error);
