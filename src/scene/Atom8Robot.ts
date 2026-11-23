@@ -16,7 +16,7 @@ import { Atom8AIClient } from '../ai/Atom8AIClient';
 import type { AIQuizQuestion } from '../ai/Atom8AIClient';
 import type { LiveExperimentContext } from '../logic/FlameTestLogic';
 
-export type RobotState = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'HAPPY' | 'QUIZ';
+export type RobotState = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'HAPPY' | 'QUIZ' | 'VIDEO' | 'EXPERIMENTS';
 
 export interface Atom8Callbacks {
     onStepRequested?: () => void;
@@ -354,10 +354,10 @@ export class Atom8Robot {
 
         // Refresh speech display with contextual greeting matching live state
         const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
-        if (exp && !this.isSpeaking && this.currentState !== 'QUIZ') {
+        if (exp && !this.isSpeaking && this.currentState !== 'QUIZ' && this.currentState !== 'VIDEO' && this.currentState !== 'EXPERIMENTS') {
             const mystery = exp.currentMysteryName || 'Flame Test';
-            const action = exp.nextValidAction || 'Choose an action below:';
-            this.currentSpeechText = `Active: ${mystery}. Next: ${action} Choose an action or ask me anything:`;
+            const stepTitle = exp.currentStepTitle || 'Testing';
+            this.currentSpeechText = `Active: ${mystery}. Current Step: ${stepTitle}. Select an action below or ask me any question:`;
         }
         this.updateHUDDisplay();
         if (this.callbacks.onPanelVisibilityChanged) {
@@ -370,10 +370,10 @@ export class Atom8Robot {
      * Called whenever live experiment state changes in FlameTestLogic.
      */
     public onExperimentStateChanged(context: any) {
-        if (this.isHUDOpen && !this.isSpeaking && this.currentState !== 'QUIZ') {
+        if (this.isHUDOpen && !this.isSpeaking && this.currentState !== 'QUIZ' && this.currentState !== 'VIDEO' && this.currentState !== 'EXPERIMENTS') {
             const mystery = context?.currentMysteryName || 'Flame Test';
-            const action = context?.nextValidAction || 'Choose an action below:';
-            this.currentSpeechText = `Active: ${mystery}. Next: ${action} Choose an action or ask me anything:`;
+            const stepTitle = context?.currentStepTitle || 'Testing';
+            this.currentSpeechText = `Active: ${mystery}. Current Step: ${stepTitle}. Select an action below or ask me any question:`;
             this.updateHUDDisplay();
             if (this.callbacks.onSpeechUpdated) {
                 this.callbacks.onSpeechUpdated(this.currentSpeechText);
@@ -412,6 +412,9 @@ export class Atom8Robot {
      * Build 3D interactive hit-boxes for HUD actions.
      */
     private setupHUDButtons() {
+        // Clean up previous button meshes from hudGroup
+        const toRemove = this.hudGroup.children.filter(c => c !== this.hudMesh && (c as THREE.Mesh).isMesh && (c.userData?.isAtom8Button || c.userData?.isQuizOption || c.userData?.isQuizNext || c.userData?.isQuizExit));
+        toRemove.forEach(c => this.hudGroup.remove(c));
         this.hudButtons = [];
 
         if (this.currentState === 'QUIZ') {
@@ -475,7 +478,7 @@ export class Atom8Robot {
                 new THREE.PlaneGeometry(0.045, 0.045),
                 new THREE.MeshBasicMaterial({ visible: false })
             );
-            quizCloseMesh.position.set(0.20, 0.12, 0.005);
+            quizCloseMesh.position.set(0.205, 0.120, 0.005);
             quizCloseMesh.userData = { isAtom8Button: true, buttonId: 'btn_close' };
             this.hudGroup.add(quizCloseMesh);
 
@@ -483,20 +486,54 @@ export class Atom8Robot {
                 id: 'btn_close',
                 mesh: quizCloseMesh,
                 label: "✕",
-                bounds: { minX: 0.17, maxX: 0.23, minY: 0.09, maxY: 0.15 },
+                bounds: { minX: 0.17, maxX: 0.24, minY: 0.09, maxY: 0.15 },
+                action: () => this.closePanel()
+            });
+        } else if (this.currentState === 'VIDEO' || this.currentState === 'EXPERIMENTS') {
+            // Dedicated Sub-views (Video or Experiments) with Return Button & Close Button
+            const backMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.24, 0.045),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            backMesh.position.set(0, -0.115, 0.005);
+            backMesh.userData = { isAtom8Button: true, buttonId: 'btn_back' };
+            this.hudGroup.add(backMesh);
+
+            this.hudButtons.push({
+                id: 'btn_back',
+                mesh: backMesh,
+                label: "⬅️ Back to Menu",
+                bounds: { minX: -0.12, maxX: 0.12, minY: -0.138, maxY: -0.092 },
+                action: () => this.exitSubView()
+            });
+
+            // Close Button [✕] at top-right
+            const closeMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.045, 0.045),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            closeMesh.position.set(0.205, 0.120, 0.005);
+            closeMesh.userData = { isAtom8Button: true, buttonId: 'btn_close' };
+            this.hudGroup.add(closeMesh);
+
+            this.hudButtons.push({
+                id: 'btn_close',
+                mesh: closeMesh,
+                label: "✕",
+                bounds: { minX: 0.17, maxX: 0.24, minY: 0.09, maxY: 0.15 },
                 action: () => this.closePanel()
             });
         } else {
-            // Standard Navigation & Assistant Buttons
-            // Row 1: [ 💬 Next Step ]  [ 💡 Give Hint ]  [ 🧪 Explain Flame ]
-            // Row 2: [ ⚛️ Theory Mode ]  [ ❓ Chemistry Quiz ]  [ 🎤 Voice Ask ]
+            // Standard Navigation & Assistant Buttons:
+            // Row 1: [ 💡 Hint ]  [ 📋 Current Step ]  [ ⚛️ Theory ]
+            // Row 2: [ 🎬 Video ]  [ 🧪 Experiments ]  [ ❓ Quiz ]
             const btnConfigs = [
-                { id: 'btn_step', label: "💬 Next Step", x: -0.16, y: -0.06, w: 0.14, h: 0.045, action: () => this.handleRequestStep() },
-                { id: 'btn_hint', label: "💡 Give Hint", x: 0.00, y: -0.06, w: 0.14, h: 0.045, action: () => this.handleRequestHint() },
-                { id: 'btn_flame', label: "🧪 Explain Flame", x: 0.16, y: -0.06, w: 0.14, h: 0.045, action: () => this.handleExplainFlame() },
-                { id: 'btn_theory', label: "⚛️ Theory", x: -0.16, y: -0.115, w: 0.14, h: 0.045, action: () => this.handleRequestTheory() },
-                { id: 'btn_quiz', label: "❓ Chemistry Quiz", x: 0.00, y: -0.115, w: 0.14, h: 0.045, action: () => this.startQuizMode() },
-                { id: 'btn_voice', label: "🎤 Voice Ask", x: 0.16, y: -0.115, w: 0.14, h: 0.045, action: () => this.toggleVoiceListening() }
+                { id: 'btn_hint', label: "💡 Hint", x: -0.15, y: -0.067, w: 0.134, h: 0.035, action: () => this.handleRequestHint() },
+                { id: 'btn_current_step', label: "📋 Current Step", x: 0.00, y: -0.067, w: 0.134, h: 0.035, action: () => this.handleRequestCurrentStep() },
+                { id: 'btn_theory', label: "⚛️ Theory", x: 0.15, y: -0.067, w: 0.134, h: 0.035, action: () => this.handleRequestTheory() },
+                { id: 'btn_video', label: "🎬 Video", x: -0.15, y: -0.114, w: 0.134, h: 0.035, action: () => this.handleRequestVideo() },
+                { id: 'btn_experiments', label: "🧪 Experiments", x: 0.00, y: -0.114, w: 0.134, h: 0.035, action: () => this.handleRequestExperiments() },
+                { id: 'btn_quiz', label: "❓ Quiz", x: 0.15, y: -0.114, w: 0.134, h: 0.035, action: () => this.startQuizMode() }
             ];
 
             btnConfigs.forEach(cfg => {
@@ -522,7 +559,7 @@ export class Atom8Robot {
                 new THREE.PlaneGeometry(0.045, 0.045),
                 new THREE.MeshBasicMaterial({ visible: false })
             );
-            closeMesh.position.set(0.20, 0.12, 0.005);
+            closeMesh.position.set(0.205, 0.120, 0.005);
             closeMesh.userData = { isAtom8Button: true, buttonId: 'btn_close' };
             this.hudGroup.add(closeMesh);
 
@@ -530,7 +567,7 @@ export class Atom8Robot {
                 id: 'btn_close',
                 mesh: closeMesh,
                 label: "✕",
-                bounds: { minX: 0.17, maxX: 0.23, minY: 0.09, maxY: 0.15 },
+                bounds: { minX: 0.17, maxX: 0.24, minY: 0.09, maxY: 0.15 },
                 action: () => this.closePanel()
             });
         }
@@ -942,6 +979,106 @@ export class Atom8Robot {
                 ctx.font = 'bold 16px "Inter", sans-serif';
                 ctx.fillText('Exit Quiz', 102, 437);
             }
+        } else if (this.currentState === 'VIDEO') {
+            // Video Sub-view
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 20px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('🎬 EDUCATIONAL VIDEO • FLAME TEST SPECTROSCOPY', 42, 105);
+
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(40, 125, w - 80, 240, 14);
+            ctx.fill();
+            ctx.strokeStyle = '#e11d48';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 22px "Inter", sans-serif';
+            ctx.fillText('NCERT Class 10: Flame Test of Metal Salts', 60, 165);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '500 17px "Inter", sans-serif';
+            this.wrapText(ctx, 'Qualitative demonstration of characteristic flame coloration for LiCl (Crimson), NaCl (Golden Yellow), KCl (Lilac), CaCl2 (Brick Red), CuCl2 (Blue-Green), and SrCl2 (Scarlet Red).', 60, 198, w - 120, 24);
+
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+            ctx.beginPath();
+            ctx.roundRect(60, 260, w - 120, 42, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#fca5a5';
+            ctx.font = '600 15px "Inter", sans-serif';
+            ctx.fillText('STATUS: Video stream offline in standalone lab build. Live 3D simulation active on bench!', 75, 287);
+
+            // Back button
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(276, 395, 215, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬅️ Back to Menu', 383, 427);
+        } else if (this.currentState === 'EXPERIMENTS') {
+            // Experiments Sub-view
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 20px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('🧪 LABVERSE PRACTICAL EXPERIMENTS', 42, 105);
+
+            // Card 1: Flame Test
+            ctx.fillStyle = 'rgba(2, 132, 199, 0.25)';
+            ctx.beginPath();
+            ctx.roundRect(40, 125, w - 80, 110, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 19px "Inter", sans-serif';
+            ctx.fillText('🟢 1. Flame Test (Metal Chlorides) — ACTIVE', 56, 155);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '500 16px "Inter", sans-serif';
+            this.wrapText(ctx, 'Spectroscopic identification of metal cations (Li, Na, K, Ca, Cu, Sr) using Bunsen burner flame emission.', 56, 185, w - 112, 22);
+
+            // Card 2: Litmus Paper Test
+            ctx.fillStyle = 'rgba(124, 58, 237, 0.25)';
+            ctx.beginPath();
+            ctx.roundRect(40, 250, w - 80, 110, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#7c3aed';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#c084fc';
+            ctx.font = 'bold 19px "Inter", sans-serif';
+            ctx.fillText('📘 2. Litmus Paper Acid-Base Test — AVAILABLE', 56, 280);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '500 16px "Inter", sans-serif';
+            this.wrapText(ctx, 'Identification of acids and bases using red and blue litmus indicators. (In desktop, switch via litmus.html)', 56, 310, w - 112, 22);
+
+            // Back button
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(276, 395, 215, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬅️ Back to Menu', 383, 427);
         } else {
             // Standard Dialogue Bubble & Actions
             ctx.fillStyle = '#f8fafc';
@@ -949,17 +1086,17 @@ export class Atom8Robot {
             ctx.textAlign = 'left';
             this.wrapText(ctx, this.currentSpeechText, 42, 115, w - 84, 32);
 
-            // Action Buttons Row 1: [ 💬 Next Step ]  [ 💡 Give Hint ]  [ 🧪 Explain Flame ]
+            // Action Buttons Row 1: [ 💡 Hint ]  [ 📋 Current Step ]  [ ⚛️ Theory ]
             const row1 = [
-                { label: '💬 Next Step', x: 42, w: 215, bg: '#0284c7' },
-                { label: '💡 Give Hint', x: 275, w: 215, bg: '#d97706' },
-                { label: '🧪 Explain Flame', x: 508, w: 215, bg: '#7c3aed' }
+                { label: '💡 Hint', x: 36, w: 215, bg: '#d97706' },
+                { label: '📋 Current Step', x: 276, w: 215, bg: '#0284c7' },
+                { label: '⚛️ Theory', x: 516, w: 215, bg: '#0891b2' }
             ];
 
             row1.forEach(btn => {
                 ctx.fillStyle = btn.bg;
                 ctx.beginPath();
-                ctx.roundRect(btn.x, 312, btn.w, 52, 12);
+                ctx.roundRect(btn.x, 320, btn.w, 52, 12);
                 ctx.fill();
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 1.5;
@@ -968,20 +1105,20 @@ export class Atom8Robot {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px "Inter", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(btn.label, btn.x + btn.w / 2, 345);
+                ctx.fillText(btn.label, btn.x + btn.w / 2, 353);
             });
 
-            // Action Buttons Row 2: [ ⚛️ Theory Mode ]  [ ❓ Chemistry Quiz ]  [ 🎤 Voice Ask ]
+            // Action Buttons Row 2: [ 🎬 Video ]  [ 🧪 Experiments ]  [ ❓ Quiz ]
             const row2 = [
-                { label: '⚛️ Theory Mode', x: 42, w: 215, bg: '#0891b2' },
-                { label: '❓ Quiz Mode', x: 275, w: 215, bg: '#059669' },
-                { label: this.isListeningVoice ? '🔴 Listening...' : '🎤 Voice Ask', x: 508, w: 215, bg: this.isListeningVoice ? '#dc2626' : '#2563eb' }
+                { label: '🎬 Video', x: 36, w: 215, bg: '#e11d48' },
+                { label: '🧪 Experiments', x: 276, w: 215, bg: '#7c3aed' },
+                { label: '❓ Quiz', x: 516, w: 215, bg: '#059669' }
             ];
 
             row2.forEach(btn => {
                 ctx.fillStyle = btn.bg;
                 ctx.beginPath();
-                ctx.roundRect(btn.x, 382, btn.w, 52, 12);
+                ctx.roundRect(btn.x, 395, btn.w, 52, 12);
                 ctx.fill();
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 1.5;
@@ -990,7 +1127,7 @@ export class Atom8Robot {
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 20px "Inter", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(btn.label, btn.x + btn.w / 2, 415);
+                ctx.fillText(btn.label, btn.x + btn.w / 2, 428);
             });
         }
 
@@ -1020,18 +1157,22 @@ export class Atom8Robot {
     /**
      * Handlers for interactive actions.
      */
-    public async handleRequestStep() {
+    public async handleRequestCurrentStep() {
         this.setState('THINKING');
         this.audio.playDroidChirp('thinking');
-        this.currentSpeechText = "Determining your next experiment step...";
+        this.currentSpeechText = "Explaining your current experiment step...";
         this.updateHUDDisplay();
 
         const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
-        const res = await this.aiClient.askAI(exp?.nextValidAction || '', 'step', exp as any);
+        const res = await this.aiClient.askAI(exp?.currentStepTitle || '', 'current_step', exp as any);
         this.speak(res.reply, res.emotion);
         if (this.callbacks.onStepRequested) {
             this.callbacks.onStepRequested();
         }
+    }
+
+    public async handleRequestStep() {
+        return this.handleRequestCurrentStep();
     }
 
     public async handleRequestHint() {
@@ -1068,6 +1209,41 @@ export class Atom8Robot {
         const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
         const res = await this.aiClient.askAI('', 'theory', exp as any);
         this.speak(res.reply, res.emotion);
+    }
+
+    public async handleRequestVideo() {
+        this.currentState = 'VIDEO';
+        this.setupHUDButtons();
+        this.audio.playDroidChirp('thinking');
+        this.updateHUDDisplay();
+
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        const res = await this.aiClient.askAI('', 'video', exp as any);
+        this.speak(res.reply, res.emotion);
+    }
+
+    public async handleRequestExperiments() {
+        this.currentState = 'EXPERIMENTS';
+        this.setupHUDButtons();
+        this.audio.playDroidChirp('happy');
+        this.updateHUDDisplay();
+
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        const res = await this.aiClient.askAI('', 'experiments', exp as any);
+        this.speak(res.reply, res.emotion);
+    }
+
+    public exitSubView() {
+        this.currentState = 'IDLE';
+        this.setupHUDButtons();
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        if (exp) {
+            const mystery = exp.currentMysteryName || 'Flame Test';
+            const stepTitle = exp.currentStepTitle || 'Testing';
+            this.currentSpeechText = `Active: ${mystery}. Current Step: ${stepTitle}. Select an action below or ask me any question:`;
+        }
+        this.updateHUDDisplay();
+        this.audio.playDroidChirp('welcome');
     }
 
     public toggleVoiceListening() {

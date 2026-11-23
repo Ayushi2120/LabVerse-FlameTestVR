@@ -143,34 +143,35 @@ export interface StepGuidance {
 
 export class ChemistryKnowledge {
     /**
-     * Contextual Next Step Guidance matching LIVE experiment state machine.
-     * Evaluates strictly what the student needs to do next without skipping or repeating.
+     * CURRENT STEP EXPLANATION
+     * Explains ONLY the student's current experiment step based on real active state.
+     * Does NOT treat completed steps as pending or tell student to do what is already done.
      */
-    public static getContextualStep(ctx: any): { reply: string; emotion: 'speaking' | 'happy' } {
+    public static getContextualCurrentStep(ctx: any): { reply: string; emotion: 'speaking' | 'happy' } {
         if (!ctx) {
             return {
-                reply: "Beep-whirr! Welcome to the lab! Please equip your safety gloves from the left bench to begin.",
+                reply: "Beep-whirr! Welcome to the lab! You are currently at the initialization stage. Please put on your safety gloves to begin.",
                 emotion: 'speaking'
             };
         }
 
         if (ctx.state === 'ORIENTATION' || ctx.state === 'STARTING') {
             return {
-                reply: "Beep-boop! Welcome to LABVERSE! Click or poke 'START EXPERIMENT' on the holographic screen in front of you to initialize our Chemistry workstation!",
+                reply: "Current Step: Workstation Initialization. You are currently at the orientation stage. Click or poke 'START EXPERIMENT' on the holographic screen in front of you to initialize our Chemistry workstation.",
                 emotion: 'speaking'
             };
         }
 
         if (!ctx.areGlovesEquipped) {
             return {
-                reply: "Beep-boop! Safety protocol first! Please put on your blue nitrile gloves from the dispenser box on the left bench before touching any chemicals or tools.",
+                reply: "Current Step: Laboratory Safety Preparation. You are currently at the personal safety preparation stage. In wet chemistry, wearing nitrile protective gloves before handling glassware, reagents, or apparatus protects skin against chemical irritation and prevents natural oils from contaminating pure salts.",
                 emotion: 'speaking'
             };
         }
 
         if (ctx.isExperimentCompleted || (ctx.completedSalts && ctx.completedSalts.length >= 6)) {
             return {
-                reply: "Bleep-boop! Congratulations! 🎉 You have completed all six flame test challenges! Review all your spectral observations in the 3D Lab Notebook on the right table.",
+                reply: "Current Step: Practical Completed! 🎉 All six flame test mystery samples have been analyzed and identified. Full observations and spectral data are safely archived in your 3D Lab Notebook on the right table.",
                 emotion: 'happy'
             };
         }
@@ -178,23 +179,33 @@ export class ChemistryKnowledge {
         if (ctx.isFlameResultObserved) {
             const name = ctx.currentSaltName || 'metal salt';
             const flame = ctx.observedFlameColor || ctx.currentFlameColorName || 'characteristic';
+            const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
             return {
-                reply: `Spectroscopy recorded! ${name} produced a brilliant ${flame} flame! Review the 3D result display on your right and click 'Continue' to advance to the next challenge.`,
+                reply: `Current Step: Observation Analysis & Recording. You have observed the brilliant ${flame} flame emitted by ${name} (${mystery}). You are currently at the observation recording step, analyzing this spectral result in the 3D result card and recording it into the lab records before proceeding.`,
                 emotion: 'happy'
             };
         }
 
-        if (!ctx.isWireGrabbed && !ctx.isWireDipped) {
+        if (ctx.isWireInFlame) {
             return {
-                reply: `Whirr-click! Pick up the platinum wire from the stand on the table. Platinum is chemically inert and will not color our test flame!`,
+                reply: "Current Step: Optical Flame Observation. The platinum wire loop is actively in the flame! Thermal energy is exciting valence electrons to higher orbitals. You are currently observing the distinctive photon emission color burst as electrons relax back to ground state.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.isWireGrabbed && !ctx.isWireDipped) {
+            const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
+            return {
+                reply: `Current Step: Tool Acquisition (Platinum Loop). Gloves are safely equipped. You are currently on the tool preparation step for ${mystery}. The platinum wire inoculating loop on the table stand is clean, inert, and ready to be picked up.`,
                 emotion: 'speaking'
             };
         }
 
         if (!ctx.isWireDipped) {
             const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
+            const letter = ctx.currentSaltLetter || 'A';
             return {
-                reply: `Beep-whirr! Follow the cyan 3D arrow to dip the loop of your platinum wire into ${mystery} to coat the tip with sample crystals!`,
+                reply: `Current Step: Sample Collection for ${mystery}. You are holding the clean platinum inoculating loop. You are currently at the sample collection step, touching the loop to the salt crystals in watch glass ${letter} so sample grains adhere to the loop.`,
                 emotion: 'speaking'
             };
         }
@@ -202,14 +213,15 @@ export class ChemistryKnowledge {
         if (!ctx.isWireGrabbed && ctx.isWireDipped) {
             const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
             return {
-                reply: `Your platinum wire is coated with ${mystery}! Pick up the wire again to bring your sample to the Bunsen burner.`,
+                reply: `Current Step: Coated Wire Handling. Your platinum wire loop is coated with crystals of ${mystery}. You are currently at the sample handling step, ready to pick up the coated wire from the stand to bring it to the Bunsen burner.`,
                 emotion: 'speaking'
             };
         }
 
         if (!ctx.isBurnerLit) {
+            const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
             return {
-                reply: "Whirr-click! Turn ON the Bunsen burner! Click or poke the round power switch button on the burner base to ignite the blue flame.",
+                reply: `Current Step: Burner Ignition. Your platinum loop is coated with crystals of ${mystery}. You are currently at the heat source ignition step, igniting the Bunsen burner to produce the high-temperature non-luminous blue flame required for thermal excitation.`,
                 emotion: 'speaking'
             };
         }
@@ -217,22 +229,22 @@ export class ChemistryKnowledge {
         if (!ctx.isWireInFlame && !ctx.isFlameResultObserved) {
             const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
             return {
-                reply: `Bleep-boop! Bring your coated platinum loop with ${mystery} directly into the hottest outer cone of the blue Bunsen flame and watch closely for the color burst!`,
-                emotion: 'speaking'
-            };
-        }
-
-        if (ctx.isWireInFlame) {
-            return {
-                reply: "Beep-whirr! Hold the wire steady in the flame for 3.5 seconds to observe the vibrant flame emission burst!",
+                reply: `Current Step: Flame Test Heating. Your sample is loaded with ${mystery} and the burner is lit with a non-luminous blue flame. You are currently at the flame heating step, introducing the coated loop into the hottest outer cone (~1500°C) of the flame.`,
                 emotion: 'speaking'
             };
         }
 
         return {
-            reply: `Beep-whirr! ${ctx.nextValidAction || 'Follow the cyan 3D directional arrow to continue the experiment.'}`,
+            reply: `Current Step: ${ctx.currentStepTitle || 'Practical Testing'}. ${ctx.currentStepDescription || 'You are actively performing the flame test practical.'}`,
             emotion: 'speaking'
         };
+    }
+
+    /**
+     * Backward-compatible alias for getContextualCurrentStep.
+     */
+    public static getContextualStep(ctx: any): { reply: string; emotion: 'speaking' | 'happy' } {
+        return ChemistryKnowledge.getContextualCurrentStep(ctx);
     }
 
     /**
@@ -257,7 +269,7 @@ export class ChemistryKnowledge {
 
         if (!ctx.isWireGrabbed && !ctx.isWireDipped) {
             return {
-                reply: "Platinum has an extremely high melting point (1768°C) and is chemically inert, so it will not impart any color of its own to the flame!",
+                reply: "Look at the table stand: pick up the platinum wire! Platinum has an extremely high melting point (1768°C) and is chemically inert, so it will not impart any color of its own to the flame!",
                 emotion: 'thinking'
             };
         }
@@ -344,7 +356,21 @@ export class ChemistryKnowledge {
      * Contextual Theory Explanation relevant to the CURRENT step.
      */
     public static getContextualTheory(ctx: any): { reply: string; emotion: 'speaking' | 'happy' } {
-        if (!ctx || !ctx.areGlovesEquipped || (!ctx.isWireGrabbed && !ctx.isWireDipped)) {
+        if (!ctx) {
+            return {
+                reply: "Atomic emission spectroscopy reveals the unique electronic transitions of metal cations when heated in a flame.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.isExperimentCompleted || (ctx.completedSalts && ctx.completedSalts.length >= 6)) {
+            return {
+                reply: "Atomic emission spectroscopy is foundational to modern science: astronomers analyze starlight absorption and emission lines to determine the chemical composition and temperature of distant stars and galaxies!",
+                emotion: 'happy'
+            };
+        }
+
+        if (!ctx.areGlovesEquipped || (!ctx.isWireGrabbed && !ctx.isWireDipped)) {
             return {
                 reply: "In atomic spectroscopy, contamination control is vital. Platinum wires and clean gloves ensure no foreign alkali metal residues create false emission lines in our observations.",
                 emotion: 'speaking'
@@ -382,6 +408,52 @@ export class ChemistryKnowledge {
         return {
             reply: "Bohr's quantum model explains that each chemical element has a distinct electron configuration, so each metal ion emits unique, quantized wavelengths of light when heated.",
             emotion: 'speaking'
+        };
+    }
+
+    /**
+     * Contextual Educational Video guidance.
+     * Shows video information or clearly states if offline/unavailable.
+     */
+    public static getContextualVideo(ctx: any): { reply: string; emotion: 'speaking' | 'thinking'; videoInfo: { title: string; topic: string; status: string } } {
+        const mystery = ctx?.currentMysteryName || `Mystery Salt ${ctx?.currentSaltLetter || 'A'}`;
+        const title = "Class 10 Chemistry: Flame Test & Spectroscopy Practical Guide";
+        const topic = `Flame emission demonstration and procedure for ${mystery}`;
+        const status = "Offline Mode: Video stream is not pre-bundled in this standalone workstation build. The live interactive 3D simulation on your bench provides the complete procedural demonstration!";
+
+        return {
+            reply: `🎬 Educational Video: "${title}". Notice: Local video stream is not pre-bundled in this offline workstation build. You have the full live 3D laboratory simulation active right in front of you!`,
+            emotion: 'speaking',
+            videoInfo: { title, topic, status }
+        };
+    }
+
+    /**
+     * Actual available experiments in LABVERSE.
+     */
+    public static getContextualExperiments(_ctx?: any): { reply: string; emotion: 'speaking' | 'happy'; experiments: { id: string; name: string; status: string; url: string; description: string }[] } {
+        const activeExp = _ctx?.experimentName || 'Flame Test';
+        const experiments = [
+            {
+                id: 'flame_test',
+                name: 'Flame Test (Metal Chlorides)',
+                status: activeExp.includes('Litmus') ? 'AVAILABLE' : 'ACTIVE',
+                url: './index.html',
+                description: 'Identification of metal cations (Li, Na, K, Ca, Cu, Sr) via Bunsen burner atomic flame emission spectroscopy.'
+            },
+            {
+                id: 'litmus_test',
+                name: 'Litmus Paper Acid-Base Test',
+                status: activeExp.includes('Litmus') ? 'ACTIVE' : 'AVAILABLE',
+                url: './litmus.html',
+                description: 'Qualitative analysis of acidic and basic solutions using red and blue litmus indicator paper.'
+            }
+        ];
+
+        return {
+            reply: "🧪 LABVERSE Practical Experiments:\n1. 🟢 Flame Test (Active Workstation) — Metal cation emission spectroscopy.\n2. 📘 Litmus Paper Test (Available) — Acid-base testing with red & blue indicators.\nSelect an experiment to view details or switch practicals!",
+            emotion: 'speaking',
+            experiments
         };
     }
 

@@ -86,7 +86,7 @@ export class Atom8AIClient {
      */
     public async askAI(
         query: string,
-        mode: 'ask' | 'step' | 'hint' | 'explain' | 'theory' | 'quiz' = 'ask',
+        mode: 'ask' | 'current_step' | 'step' | 'hint' | 'explain' | 'theory' | 'video' | 'experiments' | 'quiz' = 'ask',
         context: AIExperimentContext = {}
     ): Promise<AIChatResponse> {
         // Track progressive hint tier
@@ -138,8 +138,8 @@ export class Atom8AIClient {
         let fallbackReply = "";
         let fallbackEmotion: 'speaking' | 'happy' | 'thinking' | 'question' = 'speaking';
 
-        if (mode === 'step') {
-            const step = ChemistryKnowledge.getContextualStep(context);
+        if (mode === 'current_step' || mode === 'step') {
+            const step = ChemistryKnowledge.getContextualCurrentStep(context);
             fallbackReply = step.reply;
             fallbackEmotion = step.emotion;
         } else if (mode === 'hint') {
@@ -154,6 +154,14 @@ export class Atom8AIClient {
             const th = ChemistryKnowledge.getContextualTheory(context);
             fallbackReply = th.reply;
             fallbackEmotion = th.emotion;
+        } else if (mode === 'video') {
+            const vid = ChemistryKnowledge.getContextualVideo(context);
+            fallbackReply = vid.reply;
+            fallbackEmotion = vid.emotion;
+        } else if (mode === 'experiments') {
+            const exp = ChemistryKnowledge.getContextualExperiments(context);
+            fallbackReply = exp.reply;
+            fallbackEmotion = exp.emotion;
         } else {
             const local = ChemistryKnowledge.answerQuestion(query, context);
             fallbackReply = local.reply;

@@ -300,6 +300,7 @@ async function init() {
                         isWireHeld = true;
                         isRightMouseDragging = true;
                         logicEngine.isHeldDesktop = true;
+                        logicEngine.notifyAtom8StateChanged();
                         desktopHeightOffset = 0;
                         if (wireObject) {
                             desktopGrabPlaneY = wireObject.position.y;
@@ -489,6 +490,7 @@ async function init() {
                             isWireHeld = true;
                             isLeftMouseDragging = true;
                             logicEngine.isHeldDesktop = true;
+                            logicEngine.notifyAtom8StateChanged();
                             desktopHeightOffset = 0;
 
                             const hitPt = intersects[i].point;
@@ -515,12 +517,14 @@ async function init() {
                 isLeftMouseDragging = false;
                 isWireHeld = false;
                 logicEngine.isHeldDesktop = false;
+                logicEngine.notifyAtom8StateChanged();
             }
         } else if (e.button === 2) {
             if (isRightMouseDragging) {
                 isRightMouseDragging = false;
                 isWireHeld = false;
                 logicEngine.isHeldDesktop = false;
+                logicEngine.notifyAtom8StateChanged();
             }
         }
     });
@@ -1005,10 +1009,11 @@ async function init() {
     const atom8CloseBtn = document.getElementById('atom8-close-btn');
     const atom8SpeechBox = document.getElementById('atom8-speech-box');
     const atom8StatusPill = document.getElementById('atom8-status-pill');
-    const atom8BtnStep = document.getElementById('atom8-btn-step');
+    const atom8BtnCurrentStep = document.getElementById('atom8-btn-current-step');
     const atom8BtnHint = document.getElementById('atom8-btn-hint');
-    const atom8BtnFlame = document.getElementById('atom8-btn-flame');
     const atom8BtnTheory = document.getElementById('atom8-btn-theory');
+    const atom8BtnVideo = document.getElementById('atom8-btn-video');
+    const atom8BtnExperiments = document.getElementById('atom8-btn-experiments');
     const atom8BtnQuiz = document.getElementById('atom8-btn-quiz');
     const atom8Input = document.getElementById('atom8-input') as HTMLInputElement | null;
     const atom8SendBtn = document.getElementById('atom8-send-btn');
@@ -1061,11 +1066,11 @@ async function init() {
         });
     }
 
-    if (atom8BtnStep) {
-        atom8BtnStep.addEventListener('click', (e) => {
+    if (atom8BtnCurrentStep) {
+        atom8BtnCurrentStep.addEventListener('click', (e) => {
             e.stopPropagation();
             if (logicEngine.getAtom8Robot()) {
-                logicEngine.getAtom8Robot().handleRequestStep();
+                logicEngine.getAtom8Robot().handleRequestCurrentStep();
             }
         });
     }
@@ -1079,20 +1084,29 @@ async function init() {
         });
     }
 
-    if (atom8BtnFlame) {
-        atom8BtnFlame.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (logicEngine.getAtom8Robot()) {
-                logicEngine.getAtom8Robot().handleExplainFlame();
-            }
-        });
-    }
-
     if (atom8BtnTheory) {
         atom8BtnTheory.addEventListener('click', (e) => {
             e.stopPropagation();
             if (logicEngine.getAtom8Robot()) {
                 logicEngine.getAtom8Robot().handleRequestTheory();
+            }
+        });
+    }
+
+    if (atom8BtnVideo) {
+        atom8BtnVideo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestVideo();
+            }
+        });
+    }
+
+    if (atom8BtnExperiments) {
+        atom8BtnExperiments.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestExperiments();
             }
         });
     }

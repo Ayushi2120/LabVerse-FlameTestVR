@@ -131,6 +131,8 @@ export class FlameTestLogic {
         this.audio.playGrab();
         if (this.currentState === ExperimentState.IDLE) {
             this.transitionTo(ExperimentState.WIRE_GRABBED);
+        } else {
+            this.notifyAtom8StateChanged();
         }
     }
 
@@ -836,6 +838,7 @@ export class FlameTestLogic {
 
         // Show 3D arrow to target salt container (Feature 3)
         this.updateTargetArrowVisibility();
+        this.notifyAtom8StateChanged();
     }
 
     public unequipGloves() {
@@ -852,6 +855,7 @@ export class FlameTestLogic {
             this.grabHintSprite.visible = false;
         }
         this.updateTargetArrowVisibility();
+        this.notifyAtom8StateChanged();
     }
 
     public getGloveColor(): number {
@@ -1147,6 +1151,12 @@ export class FlameTestLogic {
         };
     }
 
+    public notifyAtom8StateChanged() {
+        if (this.atom8Robot) {
+            this.atom8Robot.onExperimentStateChanged(this.getLiveExperimentContext());
+        }
+    }
+
     // --- STATE MACHINE TRANSITION ENGINE ---
     private transitionTo(newState: ExperimentState) {
         if (this.currentState === newState) return;
@@ -1289,6 +1299,7 @@ export class FlameTestLogic {
         }
 
         this.showFeedback(this.isBurnerOn ? "Burner Ignited" : "Burner Turned Off", this.bunsenBurner.position);
+        this.notifyAtom8StateChanged();
     }
 
     public getResetButtonMesh(): THREE.Mesh {
@@ -1341,6 +1352,7 @@ export class FlameTestLogic {
         if (this.onReleaseCallback) {
             this.onReleaseCallback();
         }
+        this.notifyAtom8StateChanged();
     }
 
     public async triggerExitVR(): Promise<boolean> {
