@@ -10,10 +10,11 @@
 
 import * as THREE from 'three';
 import { AudioEngine } from '../audio/AudioEngine';
-import { QUIZ_QUESTIONS } from '../ai/ChemistryKnowledge';
+import { ChemistryKnowledge, QUIZ_QUESTIONS } from '../ai/ChemistryKnowledge';
 import type { QuizQuestion } from '../ai/ChemistryKnowledge';
 import { Atom8AIClient } from '../ai/Atom8AIClient';
 import type { AIQuizQuestion } from '../ai/Atom8AIClient';
+import type { LiveExperimentContext } from '../logic/FlameTestLogic';
 
 export type RobotState = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'HAPPY' | 'QUIZ';
 
@@ -23,17 +24,7 @@ export interface Atom8Callbacks {
     onQuizCompleted?: (score: number, total: number) => void;
     onPanelVisibilityChanged?: (isOpen: boolean) => void;
     onSpeechUpdated?: (text: string) => void;
-    getCurrentExperimentState?: () => {
-        state: string;
-        saltIndex: number;
-        areGlovesEquipped: boolean;
-        currentSaltLetter?: string;
-        currentSaltName?: string;
-        currentSaltFormula?: string;
-        observedFlameColor?: string;
-        completedSalts?: string[];
-        isBurnerLit?: boolean;
-    };
+    getCurrentExperimentState?: () => LiveExperimentContext;
 }
 
 export class Atom8Robot {
@@ -360,11 +351,34 @@ export class Atom8Robot {
         this.hudTargetScale = 1.0;
         this.hudGroup.visible = true;
         this.audio.playBlip();
+
+        // Refresh speech display with contextual greeting matching live state
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        if (exp && !this.isSpeaking && this.currentState !== 'QUIZ') {
+            const mystery = exp.currentMysteryName || 'Flame Test';
+            const action = exp.nextValidAction || 'Choose an action below:';
+            this.currentSpeechText = `Active: ${mystery}. Next: ${action} Choose an action or ask me anything:`;
+        }
         this.updateHUDDisplay();
         if (this.callbacks.onPanelVisibilityChanged) {
             this.callbacks.onPanelVisibilityChanged(true);
         }
         // Crucial requirement: Do NOT trigger AI responses or robot voice simply because the panel opens!
+    }
+
+    /**
+     * Called whenever live experiment state changes in FlameTestLogic.
+     */
+    public onExperimentStateChanged(context: any) {
+        if (this.isHUDOpen && !this.isSpeaking && this.currentState !== 'QUIZ') {
+            const mystery = context?.currentMysteryName || 'Flame Test';
+            const action = context?.nextValidAction || 'Choose an action below:';
+            this.currentSpeechText = `Active: ${mystery}. Next: ${action} Choose an action or ask me anything:`;
+            this.updateHUDDisplay();
+            if (this.callbacks.onSpeechUpdated) {
+                this.callbacks.onSpeechUpdated(this.currentSpeechText);
+            }
+        }
     }
 
     public closePanel() {
@@ -576,7 +590,7 @@ export class Atom8Robot {
         this.currentSpeechText = `Analyzing: "${query.trim()}"...`;
         this.updateHUDDisplay();
 
-        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
         const res = await this.aiClient.askAI(query.trim(), 'ask', exp as any);
         this.speak(res.reply, res.emotion);
     }
@@ -1012,8 +1026,8 @@ export class Atom8Robot {
         this.currentSpeechText = "Determining your next experiment step...";
         this.updateHUDDisplay();
 
-        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
-        const res = await this.aiClient.askAI('', 'step', exp as any);
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        const res = await this.aiClient.askAI(exp?.nextValidAction || '', 'step', exp as any);
         this.speak(res.reply, res.emotion);
         if (this.callbacks.onStepRequested) {
             this.callbacks.onStepRequested();
@@ -1026,7 +1040,7 @@ export class Atom8Robot {
         this.currentSpeechText = "Formulating a helpful hint...";
         this.updateHUDDisplay();
 
-        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
         const res = await this.aiClient.askAI('', 'hint', exp as any);
         this.speak(res.reply, res.emotion);
         if (this.callbacks.onHintRequested) {
@@ -1040,7 +1054,7 @@ export class Atom8Robot {
         this.currentSpeechText = "Analyzing flame emission spectroscopy...";
         this.updateHUDDisplay();
 
-        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
         const res = await this.aiClient.askAI('', 'explain', exp as any);
         this.speak(res.reply, res.emotion);
     }
@@ -1051,7 +1065,7 @@ export class Atom8Robot {
         this.currentSpeechText = "Connecting quantum transitions & Planck's relation...";
         this.updateHUDDisplay();
 
-        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
         const res = await this.aiClient.askAI('', 'theory', exp as any);
         this.speak(res.reply, res.emotion);
     }
@@ -1083,16 +1097,17 @@ export class Atom8Robot {
         this.quizFeedbackText = "Generating dynamic chemistry quiz...";
         this.updateHUDDisplay();
 
-        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : { state: 'GLOVES_NEEDED', saltIndex: 0, areGlovesEquipped: false };
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        const contextualQuestions = ChemistryKnowledge.getContextualQuizQuestions(exp as any);
         try {
             const dynamicQuestion = await this.aiClient.generateDynamicQuiz(exp as any);
             if (dynamicQuestion) {
-                this.activeQuizQuestions = [dynamicQuestion, ...QUIZ_QUESTIONS];
+                this.activeQuizQuestions = [dynamicQuestion, ...contextualQuestions];
             } else {
-                this.activeQuizQuestions = [...QUIZ_QUESTIONS];
+                this.activeQuizQuestions = contextualQuestions;
             }
         } catch {
-            this.activeQuizQuestions = [...QUIZ_QUESTIONS];
+            this.activeQuizQuestions = contextualQuestions;
         }
 
         this.quizFeedbackText = "";

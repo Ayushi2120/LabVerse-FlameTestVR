@@ -72,6 +72,66 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
         ],
         correctIndex: 1,
         explanation: "Platinum does not oxidize easily or produce any visible color of its own in the flame, making it the ideal neutral sample carrier!"
+    },
+    {
+        id: 6,
+        question: "What characteristic flame color does Sodium Chloride (NaCl) produce?",
+        options: [
+            "Crimson red",
+            "Intense golden yellow",
+            "Pale lilac",
+            "Emerald green"
+        ],
+        correctIndex: 1,
+        explanation: "Sodium ions produce an intense golden yellow flame due to strong D-line emission at 589 nm!"
+    },
+    {
+        id: 7,
+        question: "What flame color is observed for Potassium Chloride (KCl)?",
+        options: [
+            "Pale lilac / violet",
+            "Golden yellow",
+            "Scarlet red",
+            "Apple green"
+        ],
+        correctIndex: 0,
+        explanation: "Potassium ions emit characteristic pale lilac/violet light with principal wavelengths at 766 nm and 404 nm."
+    },
+    {
+        id: 8,
+        question: "Which metal ion produces a distinctive brick red / orange-red flame?",
+        options: [
+            "Calcium (Ca²⁺)",
+            "Copper (Cu²⁺)",
+            "Lithium (Li⁺)",
+            "Sodium (Na⁺)"
+        ],
+        correctIndex: 0,
+        explanation: "Calcium ions emit strong orange-red / brick red spectral bands around 622 nm!"
+    },
+    {
+        id: 9,
+        question: "What flame color is characteristic of Strontium Chloride (SrCl₂)?",
+        options: [
+            "Pale lilac",
+            "Golden yellow",
+            "Brilliant scarlet / crimson red",
+            "Blue-green"
+        ],
+        correctIndex: 2,
+        explanation: "Strontium produces an intense scarlet-red emission (606 nm and 662 nm), which is why it is used in road flares and red fireworks!"
+    },
+    {
+        id: 10,
+        question: "Why must the Bunsen burner flame be adjusted to non-luminous blue for flame tests?",
+        options: [
+            "To keep the laboratory cold",
+            "Because complete combustion provides ~1500°C heat without yellow soot interference",
+            "Because yellow flames make the platinum wire melt",
+            "To make the room smell like gas"
+        ],
+        correctIndex: 1,
+        explanation: "A non-luminous blue flame provides maximum temperature for thermal excitation without luminous soot particles masking sample colors!"
     }
 ];
 
@@ -82,6 +142,276 @@ export interface StepGuidance {
 }
 
 export class ChemistryKnowledge {
+    /**
+     * Contextual Next Step Guidance matching LIVE experiment state machine.
+     * Evaluates strictly what the student needs to do next without skipping or repeating.
+     */
+    public static getContextualStep(ctx: any): { reply: string; emotion: 'speaking' | 'happy' } {
+        if (!ctx) {
+            return {
+                reply: "Beep-whirr! Welcome to the lab! Please equip your safety gloves from the left bench to begin.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.state === 'ORIENTATION' || ctx.state === 'STARTING') {
+            return {
+                reply: "Beep-boop! Welcome to LABVERSE! Click or poke 'START EXPERIMENT' on the holographic screen in front of you to initialize our Chemistry workstation!",
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.areGlovesEquipped) {
+            return {
+                reply: "Beep-boop! Safety protocol first! Please put on your blue nitrile gloves from the dispenser box on the left bench before touching any chemicals or tools.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.isExperimentCompleted || (ctx.completedSalts && ctx.completedSalts.length >= 6)) {
+            return {
+                reply: "Bleep-boop! Congratulations! 🎉 You have completed all six flame test challenges! Review all your spectral observations in the 3D Lab Notebook on the right table.",
+                emotion: 'happy'
+            };
+        }
+
+        if (ctx.isFlameResultObserved) {
+            const name = ctx.currentSaltName || 'metal salt';
+            const flame = ctx.observedFlameColor || ctx.currentFlameColorName || 'characteristic';
+            return {
+                reply: `Spectroscopy recorded! ${name} produced a brilliant ${flame} flame! Review the 3D result display on your right and click 'Continue' to advance to the next challenge.`,
+                emotion: 'happy'
+            };
+        }
+
+        if (!ctx.isWireGrabbed && !ctx.isWireDipped) {
+            return {
+                reply: `Whirr-click! Pick up the platinum wire from the stand on the table. Platinum is chemically inert and will not color our test flame!`,
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.isWireDipped) {
+            const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
+            return {
+                reply: `Beep-whirr! Follow the cyan 3D arrow to dip the loop of your platinum wire into ${mystery} to coat the tip with sample crystals!`,
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.isWireGrabbed && ctx.isWireDipped) {
+            const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
+            return {
+                reply: `Your platinum wire is coated with ${mystery}! Pick up the wire again to bring your sample to the Bunsen burner.`,
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.isBurnerLit) {
+            return {
+                reply: "Whirr-click! Turn ON the Bunsen burner! Click or poke the round power switch button on the burner base to ignite the blue flame.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.isWireInFlame && !ctx.isFlameResultObserved) {
+            const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
+            return {
+                reply: `Bleep-boop! Bring your coated platinum loop with ${mystery} directly into the hottest outer cone of the blue Bunsen flame and watch closely for the color burst!`,
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.isWireInFlame) {
+            return {
+                reply: "Beep-whirr! Hold the wire steady in the flame for 3.5 seconds to observe the vibrant flame emission burst!",
+                emotion: 'speaking'
+            };
+        }
+
+        return {
+            reply: `Beep-whirr! ${ctx.nextValidAction || 'Follow the cyan 3D directional arrow to continue the experiment.'}`,
+            emotion: 'speaking'
+        };
+    }
+
+    /**
+     * Contextual Socratic Hint based on CURRENT step and live experiment state.
+     */
+    public static getContextualHint(ctx: any, tier: number = 1): { reply: string; emotion: 'thinking' | 'speaking' | 'happy' } {
+        if (!ctx || !ctx.areGlovesEquipped) {
+            return {
+                reply: "Nitrile gloves are essential in wet chemistry! They protect your skin from chemical exposure and prevent natural skin oils from contaminating pure salts.",
+                emotion: 'thinking'
+            };
+        }
+
+        if (ctx.isFlameResultObserved) {
+            const saltIdx = ctx.currentSaltIndex ?? ctx.saltIndex ?? 0;
+            const hintText = ChemistryKnowledge.getProgressiveHint(saltIdx, tier);
+            return {
+                reply: `Hint for ${ctx.currentMysteryName || 'this salt'}: ${hintText}`,
+                emotion: 'thinking'
+            };
+        }
+
+        if (!ctx.isWireGrabbed && !ctx.isWireDipped) {
+            return {
+                reply: "Platinum has an extremely high melting point (1768°C) and is chemically inert, so it will not impart any color of its own to the flame!",
+                emotion: 'thinking'
+            };
+        }
+
+        if (!ctx.isWireDipped) {
+            return {
+                reply: `Follow the cyan 3D beacon pointing to watch glass ${ctx.currentSaltLetter || 'A'}. Gently touch the wire loop to the crystals of ${ctx.currentMysteryName || 'the target salt'} to coat it.`,
+                emotion: 'thinking'
+            };
+        }
+
+        if (!ctx.isBurnerLit) {
+            return {
+                reply: "We need a non-luminous blue flame (complete combustion) so the flame's own color does not mask the subtle emission wavelengths of the metal ions.",
+                emotion: 'thinking'
+            };
+        }
+
+        if (!ctx.isWireInFlame && !ctx.isFlameResultObserved) {
+            return {
+                reply: "Aim for the outer cone of the blue flame right at the top of the inner cone, where temperatures reach ~1500°C for maximum thermal excitation!",
+                emotion: 'thinking'
+            };
+        }
+
+        if (ctx.isWireInFlame) {
+            return {
+                reply: "Notice the sudden burst of light! Thermal energy has promoted valence electrons to higher orbitals, and they are now releasing discrete photons as they relax.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.isExperimentCompleted) {
+            return {
+                reply: "All six mystery salts have been analyzed! Review the 3D Lab Notebook on the right table to see your full spectroscopy report.",
+                emotion: 'happy'
+            };
+        }
+
+        return {
+            reply: "Observe closely! In flame tests, every element's valence electron arrangement creates a unique optical emission fingerprint.",
+            emotion: 'thinking'
+        };
+    }
+
+    /**
+     * Contextual Flame Explanation for the CURRENT salt.
+     * Only reveals the observed flame color if it has actually been observed!
+     */
+    public static getContextualFlameExplanation(ctx: any): { reply: string; emotion: 'speaking' | 'happy' } {
+        if (!ctx) {
+            return {
+                reply: "In a flame test, thermal energy excites metal valence electrons to higher orbitals. When they relax back, they emit photons: ΔE = hc/λ!",
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.isExperimentCompleted) {
+            return {
+                reply: "Spectroscopy complete! You observed Lithium (Crimson Red), Sodium (Golden Yellow), Potassium (Pale Lilac), Calcium (Brick Red), Copper (Blue-Green), and Strontium (Scarlet Red). Each color represents a unique atomic fingerprint!",
+                emotion: 'happy'
+            };
+        }
+
+        if (ctx.isFlameResultObserved) {
+            const name = ctx.currentSaltName || 'Metal Chloride';
+            const formula = ctx.currentSaltFormula || 'MCl';
+            const flame = ctx.observedFlameColor || ctx.currentFlameColorName || 'characteristic';
+            return {
+                reply: `Bleep-boop! ${ctx.currentMysteryName || 'This salt'} is ${name} (${formula})! It produced a brilliant ${flame} flame. Flame heat vaporized the salt, promoting valence electrons to excited quantum states. As they relaxed to ground state, they emitted photons of ${flame} light (ΔE = hc/λ)!`,
+                emotion: 'happy'
+            };
+        }
+
+        // Flame not yet observed for current salt - do NOT spoil the color!
+        const mystery = ctx.currentMysteryName || `Mystery Salt ${ctx.currentSaltLetter || 'A'}`;
+        return {
+            reply: `Whirr-click! We are preparing to test ${mystery}. To observe its emission spectrum, coat the platinum wire with sample crystals and bring it into the blue burner flame! I won't reveal the secret flame color until you observe it!`,
+            emotion: 'speaking'
+        };
+    }
+
+    /**
+     * Contextual Theory Explanation relevant to the CURRENT step.
+     */
+    public static getContextualTheory(ctx: any): { reply: string; emotion: 'speaking' | 'happy' } {
+        if (!ctx || !ctx.areGlovesEquipped || (!ctx.isWireGrabbed && !ctx.isWireDipped)) {
+            return {
+                reply: "In atomic spectroscopy, contamination control is vital. Platinum wires and clean gloves ensure no foreign alkali metal residues create false emission lines in our observations.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.isWireDipped) {
+            return {
+                reply: `Metal chloride salts (${ctx.currentSaltFormula || 'MCl'}) are selected because chlorides have relatively low lattice energies, allowing them to vaporize and dissociate into gaseous metal atoms easily in the flame.`,
+                emotion: 'speaking'
+            };
+        }
+
+        if (!ctx.isBurnerLit) {
+            return {
+                reply: "A non-luminous blue Bunsen flame undergoes complete combustion (CH₄ + 2O₂ → CO₂ + 2H₂O), generating ~1500°C without soot (unburnt carbon) that would produce interfering yellow blackbody radiation.",
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.isWireInFlame || ctx.isFlameResultObserved) {
+            return {
+                reply: "Bohr's atomic theory states electrons occupy quantized energy levels (n = 1, 2, 3...). Flame heat excites electrons (E₂). Returning to ground state (E₁) releases a photon satisfying Planck's relation: ΔE = E₂ - E₁ = h·ν = hc/λ, forming a discrete emission line!",
+                emotion: 'speaking'
+            };
+        }
+
+        if (ctx.isExperimentCompleted) {
+            return {
+                reply: "Atomic emission spectroscopy is foundational to modern science: astronomers analyze starlight absorption and emission lines to determine the chemical composition and temperature of distant stars and galaxies!",
+                emotion: 'happy'
+            };
+        }
+
+        return {
+            reply: "Bohr's quantum model explains that each chemical element has a distinct electron configuration, so each metal ion emits unique, quantized wavelengths of light when heated.",
+            emotion: 'speaking'
+        };
+    }
+
+    /**
+     * Contextual Quiz Questions prioritized by the student's current experiment progress.
+     */
+    public static getContextualQuizQuestions(ctx: any): QuizQuestion[] {
+        const saltIdx = ctx?.currentSaltIndex ?? ctx?.saltIndex ?? 0;
+        const saltLetter = ctx?.currentSaltLetter || String.fromCharCode(65 + saltIdx);
+
+        // Map salt letter to question id
+        const letterToQId: Record<string, number> = {
+            'A': 1, // Lithium
+            'B': 6, // Sodium
+            'C': 7, // Potassium
+            'D': 8, // Calcium
+            'E': 4, // Copper
+            'F': 9  // Strontium
+        };
+
+        const targetQId = letterToQId[saltLetter] || 1;
+        const matchedQ = QUIZ_QUESTIONS.find(q => q.id === targetQId);
+        const others = QUIZ_QUESTIONS.filter(q => q.id !== targetQId);
+
+        if (matchedQ) {
+            return [matchedQ, ...others];
+        }
+        return [...QUIZ_QUESTIONS];
+    }
+
     /**
      * Context-aware experiment step guidance based on current practical state.
      */
@@ -217,10 +547,11 @@ export class ChemistryKnowledge {
     }
 
     /**
-     * Natural semantic question answering for student voice & text queries.
+     * Natural semantic question answering for student voice & text queries with full live context.
      */
-    public static answerQuestion(rawQuery: string, state: string, saltIndex: number): { reply: string; emotion: 'happy' | 'thinking' | 'speaking' | 'question' } {
+    public static answerQuestion(rawQuery: string, stateOrCtx: any, saltIndex?: number): { reply: string; emotion: 'happy' | 'thinking' | 'speaking' | 'question' } {
         const q = rawQuery.toLowerCase().trim();
+        const ctx = typeof stateOrCtx === 'object' ? stateOrCtx : { state: stateOrCtx, saltIndex: saltIndex ?? 0, areGlovesEquipped: true };
 
         // Greetings & Identity
         if (q.includes('who are you') || q.includes('your name') || q.includes('what are you')) {
@@ -231,27 +562,46 @@ export class ChemistryKnowledge {
         }
 
         if (q.includes('hello') || q.includes('hi') || q.includes('hey') || q.includes('greet')) {
+            const mystery = ctx.currentMysteryName || 'Flame Test';
             return {
-                reply: "Greetings, scientist! Ready to discover the secrets of atomic spectroscopy? Ask me anything or let's test a sample!",
+                reply: `Greetings, scientist! We are working on ${mystery}. Ready to explore atomic spectroscopy? Ask me anything or click Next Step!`,
                 emotion: 'happy'
             };
         }
 
         // Guidance & Next Step
         if (q.includes('next step') || q.includes('what do i do') || q.includes('what next') || q.includes('how to start') || q.includes('guide')) {
-            const step = this.getStepGuidance(state, saltIndex, true);
+            const step = this.getContextualStep(ctx);
             return {
-                reply: `${step.title}: ${step.text}`,
-                emotion: 'speaking'
+                reply: step.reply,
+                emotion: step.emotion
             };
         }
 
         // Hints
         if (q.includes('hint') || q.includes('clue') || q.includes('help me identify')) {
-            const hint = this.getProgressiveHint(saltIndex, 1);
+            const hint = this.getContextualHint(ctx, 1);
             return {
-                reply: `Here's a clue: ${hint}`,
-                emotion: 'thinking'
+                reply: hint.reply,
+                emotion: hint.emotion
+            };
+        }
+
+        // Flame explanation
+        if (q.includes('flame test') || q.includes('why this flame') || q.includes('explain flame')) {
+            const expl = this.getContextualFlameExplanation(ctx);
+            return {
+                reply: expl.reply,
+                emotion: expl.emotion
+            };
+        }
+
+        // Theory
+        if (q.includes('theory') || q.includes('quantum') || q.includes('planck') || q.includes('bohr model')) {
+            const th = this.getContextualTheory(ctx);
+            return {
+                reply: th.reply,
+                emotion: th.emotion
             };
         }
 

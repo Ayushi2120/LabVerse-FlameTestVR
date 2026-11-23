@@ -7,17 +7,32 @@
 import { ChemistryKnowledge } from './ChemistryKnowledge';
 
 export interface AIExperimentContext {
+    experimentName?: string;
     experiment?: string;
+    state?: string;
     currentState?: string;
     saltIndex?: number;
+    currentSaltIndex?: number;
     currentSaltLetter?: string;
+    currentMysteryName?: string;
     currentSaltName?: string;
     currentSaltFormula?: string;
+    currentFlameColorName?: string;
     observedFlameColor?: string;
     completedSalts?: string[];
+    totalSalts?: number;
+    completedCount?: number;
     areGlovesEquipped?: boolean;
+    isWireGrabbed?: boolean;
+    isWireDipped?: boolean;
     isBurnerLit?: boolean;
+    isWireInFlame?: boolean;
+    isFlameResultObserved?: boolean;
+    isExperimentCompleted?: boolean;
     hintTier?: number;
+    nextValidAction?: string;
+    currentStepTitle?: string;
+    currentStepDescription?: string;
 }
 
 export interface AIChatResponse {
@@ -120,10 +135,34 @@ export class Atom8AIClient {
         }
 
         // Local Fallback if network or server is unavailable
-        const local = ChemistryKnowledge.answerQuestion(query, context.currentState || 'EXPERIMENT', context.saltIndex || 0);
+        let fallbackReply = "";
+        let fallbackEmotion: 'speaking' | 'happy' | 'thinking' | 'question' = 'speaking';
+
+        if (mode === 'step') {
+            const step = ChemistryKnowledge.getContextualStep(context);
+            fallbackReply = step.reply;
+            fallbackEmotion = step.emotion;
+        } else if (mode === 'hint') {
+            const hint = ChemistryKnowledge.getContextualHint(context, context.hintTier || 1);
+            fallbackReply = hint.reply;
+            fallbackEmotion = hint.emotion;
+        } else if (mode === 'explain') {
+            const expl = ChemistryKnowledge.getContextualFlameExplanation(context);
+            fallbackReply = expl.reply;
+            fallbackEmotion = expl.emotion;
+        } else if (mode === 'theory') {
+            const th = ChemistryKnowledge.getContextualTheory(context);
+            fallbackReply = th.reply;
+            fallbackEmotion = th.emotion;
+        } else {
+            const local = ChemistryKnowledge.answerQuestion(query, context);
+            fallbackReply = local.reply;
+            fallbackEmotion = local.emotion as any;
+        }
+
         return {
-            reply: local.reply,
-            emotion: local.emotion as any,
+            reply: fallbackReply,
+            emotion: fallbackEmotion,
             provider: 'offline-local',
             configured: false
         };

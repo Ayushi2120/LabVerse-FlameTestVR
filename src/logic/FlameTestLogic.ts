@@ -39,6 +39,33 @@ export const ExperimentState = {
 
 export type ExperimentState = typeof ExperimentState[keyof typeof ExperimentState];
 
+export interface LiveExperimentContext {
+    experimentName: string;
+    state: ExperimentState;
+    currentState: ExperimentState;
+    areGlovesEquipped: boolean;
+    isWireGrabbed: boolean;
+    isWireDipped: boolean;
+    isBurnerLit: boolean;
+    isWireInFlame: boolean;
+    isFlameResultObserved: boolean;
+    isExperimentCompleted: boolean;
+    currentSaltIndex: number;
+    saltIndex: number;
+    currentSaltLetter: string;
+    currentMysteryName: string;
+    currentSaltName: string;
+    currentSaltFormula: string;
+    currentFlameColorName: string;
+    observedFlameColor?: string;
+    completedSalts: string[];
+    totalSalts: number;
+    completedCount: number;
+    nextValidAction: string;
+    currentStepTitle: string;
+    currentStepDescription: string;
+}
+
 export class FlameTestLogic {
     private scene: THREE.Scene;
     private world: World;
@@ -492,20 +519,7 @@ export class FlameTestLogic {
 
         // Initialize ATOM-8 AI Chemistry Robot Companion
         this.atom8Robot = new Atom8Robot(this.audio, {
-            getCurrentExperimentState: () => {
-                const sample = this.chemicalSamples?.[this.currentTargetSaltIndex];
-                return {
-                    state: this.currentState,
-                    saltIndex: this.currentTargetSaltIndex,
-                    areGlovesEquipped: this.areGlovesEquipped,
-                    currentSaltLetter: sample?.letter || String.fromCharCode(65 + this.currentTargetSaltIndex),
-                    currentSaltName: sample?.name,
-                    currentSaltFormula: sample?.formula,
-                    observedFlameColor: sample?.flameName,
-                    completedSalts: Array.from(this.completedSalts),
-                    isBurnerLit: this.isBurnerOn
-                };
-            },
+            getCurrentExperimentState: () => this.getLiveExperimentContext(),
             onStepRequested: () => {},
             onHintRequested: () => {},
             onQuizCompleted: (_score, _total) => {
@@ -1034,6 +1048,105 @@ export class FlameTestLogic {
         return this.currentState;
     }
 
+    /**
+     * SINGLE SOURCE OF TRUTH: Get full real-time telemetry of the live experiment.
+     */
+    public getLiveExperimentContext(): LiveExperimentContext {
+        const isCompleted = this.completedSalts.size >= 6;
+        const sample = this.chemicalSamples?.[this.currentTargetSaltIndex] || {
+            letter: String.fromCharCode(65 + this.currentTargetSaltIndex),
+            mysteryName: `Mystery Salt ${String.fromCharCode(65 + this.currentTargetSaltIndex)}`,
+            name: "Lithium Chloride",
+            formula: "LiCl",
+            flameName: "Crimson Red"
+        };
+        const isWireHeld = this.isWireCurrentlyHeld();
+        const isWireDipped = this.currentChemical !== null;
+        const isBurnerLit = this.isBurnerOn;
+        const isWireInFlame = this.currentState === ExperimentState.WIRE_IN_FLAME || this.burnTimer > 0;
+        const isFlameResultObserved = this.currentState === ExperimentState.FLAME_RESULT ||
+                                      this.currentState === ExperimentState.RESULT_DISPLAY ||
+                                      this.completedSalts.has(sample.letter);
+
+        // Derive the single next valid action strictly following real progress:
+        let nextValidAction = "";
+        let currentStepTitle = "";
+        let currentStepDescription = "";
+
+        if (this.currentState === ExperimentState.ORIENTATION || this.currentState === ExperimentState.STARTING) {
+            currentStepTitle = "Initialize Workstation";
+            currentStepDescription = "The experiment has not started yet. Click or poke START EXPERIMENT on the orientation display.";
+            nextValidAction = "Click START EXPERIMENT on the orientation screen in front of you.";
+        } else if (!this.areGlovesEquipped) {
+            currentStepTitle = "Step 1: Wear Safety Gloves";
+            currentStepDescription = "Personal protective equipment is required before handling chemicals and burners.";
+            nextValidAction = "Put on the blue nitrile safety gloves from the dispenser box on the left bench.";
+        } else if (isCompleted) {
+            currentStepTitle = "Experiment Complete";
+            currentStepDescription = "All 6 mystery salts have been successfully tested and identified!";
+            nextValidAction = "Review all your spectral observations in the 3D Lab Notebook on the right table.";
+        } else if (!isWireHeld && !isWireDipped) {
+            currentStepTitle = "Step 2: Grab Platinum Wire";
+            currentStepDescription = `Pick up the clean platinum inoculating loop wire to test ${sample.mysteryName || 'Mystery Salt ' + sample.letter}.`;
+            nextValidAction = "Pick up the platinum wire from the stand on the table.";
+        } else if (!isWireDipped) {
+            currentStepTitle = `Step 3: Collect ${sample.mysteryName || 'Mystery Salt ' + sample.letter}`;
+            currentStepDescription = `Coat the wire loop with sample crystals from watch glass ${sample.letter}.`;
+            nextValidAction = `Follow the cyan 3D arrow to dip the wire loop into ${sample.mysteryName || 'Mystery Salt ' + sample.letter}.`;
+        } else if (!isWireHeld && isWireDipped) {
+            currentStepTitle = "Pick Up Coated Wire";
+            currentStepDescription = `Your wire is coated with ${sample.mysteryName || 'Mystery Salt ' + sample.letter}. Grab it again to continue.`;
+            nextValidAction = "Pick up the platinum wire to bring your collected sample to the burner.";
+        } else if (!isBurnerLit) {
+            currentStepTitle = "Step 4: Ignite Bunsen Burner";
+            currentStepDescription = "The burner must be turned ON to provide the high thermal energy needed for excitation.";
+            nextValidAction = "Click or poke the round power switch on the Bunsen burner base to turn it ON.";
+        } else if (!isWireInFlame && !isFlameResultObserved) {
+            currentStepTitle = "Step 5: Heat Sample in Flame";
+            currentStepDescription = `Bring the wire loop coated with ${sample.mysteryName || 'Mystery Salt ' + sample.letter} into the blue burner flame.`;
+            nextValidAction = "Bring the coated platinum wire into the hottest outer cone of the blue Bunsen burner flame.";
+        } else if (isWireInFlame) {
+            currentStepTitle = "Step 6: Observe Emission";
+            currentStepDescription = "Thermal excitation is occurring! Excited electrons are relaxing back to ground state and releasing light.";
+            nextValidAction = "Hold the wire steady in the flame for 3.5 seconds to observe the emission color burst.";
+        } else if (isFlameResultObserved) {
+            currentStepTitle = "Step 7: Record Observation";
+            currentStepDescription = `${sample.name} produced a ${sample.flameName} flame! Observation is being logged.`;
+            nextValidAction = `Review ${sample.mysteryName || 'Mystery Salt ' + sample.letter} (${sample.name}) in the 3D result display and click Continue.`;
+        } else {
+            currentStepTitle = "Testing In Progress";
+            currentStepDescription = `Testing ${sample.mysteryName || 'Mystery Salt ' + sample.letter}.`;
+            nextValidAction = "Follow the 3D directional arrow and experiment guidance.";
+        }
+
+        return {
+            experimentName: "Flame Test (Metal Chloride Spectroscopy)",
+            state: this.currentState,
+            currentState: this.currentState,
+            areGlovesEquipped: this.areGlovesEquipped,
+            isWireGrabbed: isWireHeld,
+            isWireDipped,
+            isBurnerLit,
+            isWireInFlame,
+            isFlameResultObserved,
+            isExperimentCompleted: isCompleted,
+            currentSaltIndex: this.currentTargetSaltIndex,
+            saltIndex: this.currentTargetSaltIndex,
+            currentSaltLetter: sample.letter,
+            currentMysteryName: sample.mysteryName || `Mystery Salt ${sample.letter}`,
+            currentSaltName: sample.name,
+            currentSaltFormula: sample.formula,
+            currentFlameColorName: sample.flameName,
+            observedFlameColor: isFlameResultObserved ? sample.flameName : undefined,
+            completedSalts: Array.from(this.completedSalts),
+            totalSalts: this.chemicalSamples?.length || 6,
+            completedCount: this.completedSalts.size,
+            nextValidAction,
+            currentStepTitle,
+            currentStepDescription
+        };
+    }
+
     // --- STATE MACHINE TRANSITION ENGINE ---
     private transitionTo(newState: ExperimentState) {
         if (this.currentState === newState) return;
@@ -1081,6 +1194,11 @@ export class FlameTestLogic {
 
         // Keep 3D directional arrow strictly synchronized with state (Feature 3)
         this.updateTargetArrowVisibility();
+
+        // Single Source of Truth: Immediately notify ATOM-8 companion
+        if (this.atom8Robot) {
+            this.atom8Robot.onExperimentStateChanged(this.getLiveExperimentContext());
+        }
     }
 
     // --- BURNER POWER SWITCH POKE / TOGGLE ---
