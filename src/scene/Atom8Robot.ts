@@ -16,7 +16,7 @@ import { Atom8AIClient } from '../ai/Atom8AIClient';
 import type { AIQuizQuestion } from '../ai/Atom8AIClient';
 import type { LiveExperimentContext } from '../logic/FlameTestLogic';
 
-export type RobotState = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'HAPPY' | 'QUIZ' | 'VIDEO' | 'EXPERIMENTS';
+export type RobotState = 'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING' | 'HAPPY' | 'QUIZ' | 'STEPS' | 'GUIDE' | 'THEORY' | 'VIDEO' | 'OBSERVATIONS' | 'EXPERIMENTS';
 
 export interface Atom8Callbacks {
     onStepRequested?: () => void;
@@ -370,13 +370,17 @@ export class Atom8Robot {
      * Called whenever live experiment state changes in FlameTestLogic.
      */
     public onExperimentStateChanged(context: any) {
-        if (this.isHUDOpen && !this.isSpeaking && this.currentState !== 'QUIZ' && this.currentState !== 'VIDEO' && this.currentState !== 'EXPERIMENTS') {
-            const mystery = context?.currentMysteryName || 'Flame Test';
-            const stepTitle = context?.currentStepTitle || 'Testing';
-            this.currentSpeechText = `Active: ${mystery}. Current Step: ${stepTitle}. Select an action below or ask me any question:`;
-            this.updateHUDDisplay();
-            if (this.callbacks.onSpeechUpdated) {
-                this.callbacks.onSpeechUpdated(this.currentSpeechText);
+        if (this.isHUDOpen) {
+            if (this.currentState === 'STEPS' || this.currentState === 'OBSERVATIONS') {
+                this.updateHUDDisplay();
+            } else if (!this.isSpeaking && this.currentState !== 'QUIZ' && this.currentState !== 'VIDEO' && this.currentState !== 'EXPERIMENTS' && this.currentState !== 'GUIDE' && this.currentState !== 'THEORY') {
+                const mystery = context?.currentMysteryName || 'Flame Test';
+                const stepTitle = context?.currentStepTitle || 'Testing';
+                this.currentSpeechText = `Active: ${mystery}. Current Step: ${stepTitle}. Select an action below or ask me any question:`;
+                this.updateHUDDisplay();
+                if (this.callbacks.onSpeechUpdated) {
+                    this.callbacks.onSpeechUpdated(this.currentSpeechText);
+                }
             }
         }
     }
@@ -489,8 +493,15 @@ export class Atom8Robot {
                 bounds: { minX: 0.17, maxX: 0.24, minY: 0.09, maxY: 0.15 },
                 action: () => this.closePanel()
             });
-        } else if (this.currentState === 'VIDEO' || this.currentState === 'EXPERIMENTS') {
-            // Dedicated Sub-views (Video or Experiments) with Return Button & Close Button
+        } else if (
+            this.currentState === 'STEPS' ||
+            this.currentState === 'GUIDE' ||
+            this.currentState === 'THEORY' ||
+            this.currentState === 'VIDEO' ||
+            this.currentState === 'OBSERVATIONS' ||
+            this.currentState === 'EXPERIMENTS'
+        ) {
+            // Dedicated Sub-views with Return Button & Close Button
             const backMesh = new THREE.Mesh(
                 new THREE.PlaneGeometry(0.24, 0.045),
                 new THREE.MeshBasicMaterial({ visible: false })
@@ -524,16 +535,18 @@ export class Atom8Robot {
                 action: () => this.closePanel()
             });
         } else {
-            // Standard Navigation & Assistant Buttons:
-            // Row 1: [ 💡 Hint ]  [ 📋 Current Step ]  [ ⚛️ Theory ]
-            // Row 2: [ 🎬 Video ]  [ 🧪 Experiments ]  [ ❓ Quiz ]
+            // Standard Navigation & Assistant Buttons (8 buttons in 2 rows of 4):
+            // Row 1: [ 📋 Steps ]  [ 🎮 Guide ]  [ ⚛️ Theory ]  [ 💡 Hint ]
+            // Row 2: [ 📊 Observations ]  [ 🎬 Video ]  [ 🧪 Experiments ]  [ ❓ Quiz ]
             const btnConfigs = [
-                { id: 'btn_hint', label: "💡 Hint", x: -0.15, y: -0.067, w: 0.134, h: 0.035, action: () => this.handleRequestHint() },
-                { id: 'btn_current_step', label: "📋 Current Step", x: 0.00, y: -0.067, w: 0.134, h: 0.035, action: () => this.handleRequestCurrentStep() },
-                { id: 'btn_theory', label: "⚛️ Theory", x: 0.15, y: -0.067, w: 0.134, h: 0.035, action: () => this.handleRequestTheory() },
-                { id: 'btn_video', label: "🎬 Video", x: -0.15, y: -0.114, w: 0.134, h: 0.035, action: () => this.handleRequestVideo() },
-                { id: 'btn_experiments', label: "🧪 Experiments", x: 0.00, y: -0.114, w: 0.134, h: 0.035, action: () => this.handleRequestExperiments() },
-                { id: 'btn_quiz', label: "❓ Quiz", x: 0.15, y: -0.114, w: 0.134, h: 0.035, action: () => this.startQuizMode() }
+                { id: 'btn_steps', label: "📋 Steps", x: -0.165, y: -0.065, w: 0.10, h: 0.035, action: () => this.handleRequestSteps() },
+                { id: 'btn_guide', label: "🎮 Guide", x: -0.055, y: -0.065, w: 0.10, h: 0.035, action: () => this.handleRequestGuide() },
+                { id: 'btn_theory', label: "⚛️ Theory", x: 0.055, y: -0.065, w: 0.10, h: 0.035, action: () => this.handleRequestTheory() },
+                { id: 'btn_hint', label: "💡 Hint", x: 0.165, y: -0.065, w: 0.10, h: 0.035, action: () => this.handleRequestHint() },
+                { id: 'btn_observations', label: "📊 Observations", x: -0.165, y: -0.115, w: 0.10, h: 0.035, action: () => this.handleRequestObservations() },
+                { id: 'btn_video', label: "🎬 Video", x: -0.055, y: -0.115, w: 0.10, h: 0.035, action: () => this.handleRequestVideo() },
+                { id: 'btn_experiments', label: "🧪 Experiments", x: 0.055, y: -0.115, w: 0.10, h: 0.035, action: () => this.handleRequestExperiments() },
+                { id: 'btn_quiz', label: "❓ Quiz", x: 0.165, y: -0.115, w: 0.10, h: 0.035, action: () => this.startQuizMode() }
             ];
 
             btnConfigs.forEach(cfg => {
@@ -979,6 +992,273 @@ export class Atom8Robot {
                 ctx.font = 'bold 16px "Inter", sans-serif';
                 ctx.fillText('Exit Quiz', 102, 437);
             }
+        } else if (this.currentState === 'STEPS') {
+            // Steps Sub-view
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 20px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('📋 EXPERIMENT PROCEDURE & LIVE PROGRESS', 42, 102);
+
+            const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+            const stepsData = ChemistryKnowledge.getContextualExperimentSteps(exp);
+            
+            // 7 step rows
+            const startY = 118;
+            const rowH = 37;
+            stepsData.steps.forEach((s, idx) => {
+                const y = startY + idx * rowH;
+                const isCompleted = s.status === 'completed';
+                const isInProgress = s.status === 'in_progress';
+
+                ctx.fillStyle = isCompleted ? 'rgba(16, 185, 129, 0.22)' : (isInProgress ? 'rgba(2, 132, 199, 0.35)' : 'rgba(30, 41, 59, 0.55)');
+                ctx.beginPath();
+                ctx.roundRect(40, y, w - 80, 32, 8);
+                ctx.fill();
+
+                ctx.strokeStyle = isCompleted ? '#10b981' : (isInProgress ? '#00e5ff' : 'rgba(71, 85, 105, 0.6)');
+                ctx.lineWidth = isInProgress ? 2 : 1;
+                ctx.stroke();
+
+                // Status Badge icon
+                ctx.fillStyle = isCompleted ? '#10b981' : (isInProgress ? '#00e5ff' : '#64748b');
+                ctx.font = 'bold 14px "Inter", sans-serif';
+                ctx.textAlign = 'left';
+                const statusTag = isCompleted ? '[✓ Done]' : (isInProgress ? '[▶ Active]' : '[⏳ Pending]');
+                ctx.fillText(statusTag, 52, y + 21);
+
+                // Step Title
+                ctx.fillStyle = isCompleted ? '#a7f3d0' : (isInProgress ? '#ffffff' : '#94a3b8');
+                ctx.font = isInProgress ? 'bold 14px "Inter", sans-serif' : '500 13.5px "Inter", sans-serif';
+                ctx.fillText(`Step ${s.stepNumber}: ${s.title}`, 155, y + 21);
+            });
+
+            // Back button
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(276, 395, 215, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬅️ Back to Menu', 383, 427);
+        } else if (this.currentState === 'GUIDE') {
+            // Guide Sub-view
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 20px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('🎮 LABORATORY EQUIPMENT INTERACTION GUIDE', 42, 102);
+
+            const cardY = 120;
+            const cardW = (w - 100) / 2;
+            const cardH = 260;
+
+            // VR Card (Left)
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(40, cardY, cardW, cardH, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 16px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('🥽 Meta Quest VR (Hand Tracking)', 56, cardY + 28);
+
+            const vrGuides = [
+                '• Grab Wire: Bring hand near (<18cm) & pinch/fist',
+                '• Dip Salt: Lower wire loop into watch glass dish',
+                '• Burner: Poke round power switch on base with finger',
+                '• Flame Test: Hold wire in blue flame outer cone 3.5s',
+                '• Release Wire: Open hand flat or poke [Release Wire]',
+                '• ATOM-8: Poke robot body to open menu / speak'
+            ];
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '500 13px "Inter", sans-serif';
+            vrGuides.forEach((g, i) => {
+                ctx.fillText(g, 56, cardY + 62 + i * 32);
+            });
+
+            // Desktop Card (Right)
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(40 + cardW + 20, cardY, cardW, cardH, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#c084fc';
+            ctx.font = 'bold 16px "Inter", sans-serif';
+            ctx.fillText('💻 Desktop Controls (Mouse & Keys)', 40 + cardW + 36, cardY + 28);
+
+            const deskGuides = [
+                '• Move: WASD keys to walk around workstation',
+                '• Look: Click & drag to rotate view (Esc free cursor)',
+                '• Grab Wire: Click platinum wire loop on stand',
+                '• Dip & Test: Move wire over salt / into flame',
+                '• Release Wire: Press "Q" key on keyboard',
+                '• ATOM-8: Press "C" or click robot / top-right pill'
+            ];
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '500 13px "Inter", sans-serif';
+            deskGuides.forEach((g, i) => {
+                ctx.fillText(g, 40 + cardW + 36, cardY + 62 + i * 32);
+            });
+
+            // Back button
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(276, 395, 215, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬅️ Back to Menu', 383, 427);
+        } else if (this.currentState === 'OBSERVATIONS') {
+            // Observations Sub-view
+            ctx.fillStyle = '#e879f9';
+            ctx.font = 'bold 20px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('📊 SPECTROSCOPY OBSERVATION TABLE', 42, 102);
+
+            const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+            const obsData = ChemistryKnowledge.getContextualObservations(exp);
+            const recordedCount = obsData.observations.filter(o => o.isObserved).length;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 14px "Inter", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`Recorded: ${recordedCount} of 6 Mystery Salts`, w - 42, 102);
+
+            // Table Header
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(40, 118, w - 80, 28, 6);
+            ctx.fill();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 13px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('SAMPLE', 56, 137);
+            ctx.fillText('CHEMICAL NAME', 140, 137);
+            ctx.fillText('FORMULA', 360, 137);
+            ctx.fillText('EMITTED FLAME COLOR', 470, 137);
+            ctx.fillText('STATUS', 650, 137);
+
+            // Table Rows
+            const rowStartY = 150;
+            const rowH = 38;
+            obsData.observations.forEach((obs, idx) => {
+                const y = rowStartY + idx * rowH;
+                const isObs = obs.isObserved;
+
+                ctx.fillStyle = isObs ? 'rgba(16, 185, 129, 0.16)' : 'rgba(15, 23, 42, 0.6)';
+                ctx.beginPath();
+                ctx.roundRect(40, y, w - 80, 32, 6);
+                ctx.fill();
+
+                ctx.strokeStyle = isObs ? 'rgba(16, 185, 129, 0.6)' : 'rgba(71, 85, 105, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = isObs ? '#ffffff' : '#64748b';
+                ctx.font = 'bold 14px "Inter", sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Salt ${obs.letter}`, 56, y + 21);
+
+                ctx.fillStyle = isObs ? '#f1f5f9' : '#64748b';
+                ctx.font = '500 13px "Inter", sans-serif';
+                ctx.fillText(isObs ? obs.name : 'Unknown Salt', 140, y + 21);
+                ctx.fillText(isObs ? obs.formula : '---', 360, y + 21);
+
+                // Flame color with colored indicator
+                ctx.fillStyle = isObs ? (
+                    obs.letter === 'A' ? '#f87171' : // Crimson Red
+                    obs.letter === 'B' ? '#fbbf24' : // Golden Yellow
+                    obs.letter === 'C' ? '#c084fc' : // Pale Lilac
+                    obs.letter === 'D' ? '#fb923c' : // Brick Red
+                    obs.letter === 'E' ? '#34d399' : // Blue-Green
+                    '#f43f5e' // Scarlet Red
+                ) : '#475569';
+                ctx.font = isObs ? 'bold 14px "Inter", sans-serif' : 'italic 13px "Inter", sans-serif';
+                ctx.fillText(obs.flameColor, 470, y + 21);
+
+                ctx.fillStyle = isObs ? '#10b981' : '#64748b';
+                ctx.font = 'bold 12px "Inter", sans-serif';
+                ctx.fillText(isObs ? '✓ LOGGED' : 'PENDING', 650, y + 21);
+            });
+
+            // Back button
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(276, 395, 215, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬅️ Back to Menu', 383, 427);
+        } else if (this.currentState === 'THEORY') {
+            // Theory Sub-view
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = 'bold 20px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('⚛️ ATOMIC EMISSION SPECTROSCOPY THEORY', 42, 102);
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(40, 122, w - 80, 255, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px "Inter", sans-serif';
+            ctx.fillText('1. Thermal Electron Excitation & Relaxation', 56, 150);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '500 14px "Inter", sans-serif';
+            this.wrapText(ctx, 'Thermal energy from the Bunsen flame (~1500°C) vaporizes metal chlorides and promotes valence electrons from ground state (E1) to higher quantized energy orbitals (E2). As electrons relax, they release discrete photons.', 56, 172, w - 112, 21);
+
+            ctx.fillStyle = '#facc15';
+            ctx.font = 'bold 15px "Inter", sans-serif';
+            ctx.fillText('Planck Relation: ΔE = E₂ - E₁ = h·ν = hc / λ', 56, 245);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px "Inter", sans-serif';
+            ctx.fillText('2. Element Fingerprint & Astrophysics Application', 56, 280);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '500 14px "Inter", sans-serif';
+            this.wrapText(ctx, 'Each chemical element has a distinct nuclear charge and orbital spacing, producing unique characteristic emission wavelengths. Astronomers use this exact principle to determine chemical composition of distant stars!', 56, 302, w - 112, 21);
+
+            // Back button
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(276, 395, 215, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬅️ Back to Menu', 383, 427);
         } else if (this.currentState === 'VIDEO') {
             // Video Sub-view
             ctx.fillStyle = '#fbbf24';
@@ -1086,48 +1366,51 @@ export class Atom8Robot {
             ctx.textAlign = 'left';
             this.wrapText(ctx, this.currentSpeechText, 42, 115, w - 84, 32);
 
-            // Action Buttons Row 1: [ 💡 Hint ]  [ 📋 Current Step ]  [ ⚛️ Theory ]
+            // 8 Action Buttons (2 Rows of 4):
+            // Row 1: [ 📋 Steps ]  [ 🎮 Guide ]  [ ⚛️ Theory ]  [ 💡 Hint ]
             const row1 = [
-                { label: '💡 Hint', x: 36, w: 215, bg: '#d97706' },
-                { label: '📋 Current Step', x: 276, w: 215, bg: '#0284c7' },
-                { label: '⚛️ Theory', x: 516, w: 215, bg: '#0891b2' }
+                { label: '📋 Steps', x: 36, w: 162, bg: '#0284c7' },
+                { label: '🎮 Guide', x: 216, w: 162, bg: '#059669' },
+                { label: '⚛️ Theory', x: 396, w: 162, bg: '#0891b2' },
+                { label: '💡 Hint', x: 576, w: 162, bg: '#d97706' }
             ];
 
             row1.forEach(btn => {
                 ctx.fillStyle = btn.bg;
                 ctx.beginPath();
-                ctx.roundRect(btn.x, 320, btn.w, 52, 12);
+                ctx.roundRect(btn.x, 322, btn.w, 50, 12);
                 ctx.fill();
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px "Inter", sans-serif';
+                ctx.font = 'bold 18px "Inter", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(btn.label, btn.x + btn.w / 2, 353);
+                ctx.fillText(btn.label, btn.x + btn.w / 2, 354);
             });
 
-            // Action Buttons Row 2: [ 🎬 Video ]  [ 🧪 Experiments ]  [ ❓ Quiz ]
+            // Row 2: [ 📊 Observations ]  [ 🎬 Video ]  [ 🧪 Experiments ]  [ ❓ Quiz ]
             const row2 = [
-                { label: '🎬 Video', x: 36, w: 215, bg: '#e11d48' },
-                { label: '🧪 Experiments', x: 276, w: 215, bg: '#7c3aed' },
-                { label: '❓ Quiz', x: 516, w: 215, bg: '#059669' }
+                { label: '📊 Observations', x: 36, w: 162, bg: '#c026d3' },
+                { label: '🎬 Video', x: 216, w: 162, bg: '#e11d48' },
+                { label: '🧪 Experiments', x: 396, w: 162, bg: '#7c3aed' },
+                { label: '❓ Quiz', x: 576, w: 162, bg: '#2563eb' }
             ];
 
             row2.forEach(btn => {
                 ctx.fillStyle = btn.bg;
                 ctx.beginPath();
-                ctx.roundRect(btn.x, 395, btn.w, 52, 12);
+                ctx.roundRect(btn.x, 395, btn.w, 50, 12);
                 ctx.fill();
                 ctx.strokeStyle = '#ffffff';
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px "Inter", sans-serif';
+                ctx.font = 'bold 18px "Inter", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(btn.label, btn.x + btn.w / 2, 428);
+                ctx.fillText(btn.label, btn.x + btn.w / 2, 427);
             });
         }
 
@@ -1157,22 +1440,48 @@ export class Atom8Robot {
     /**
      * Handlers for interactive actions.
      */
-    public async handleRequestCurrentStep() {
-        this.setState('THINKING');
+    public async handleRequestSteps() {
+        this.currentState = 'STEPS';
+        this.setupHUDButtons();
         this.audio.playDroidChirp('thinking');
-        this.currentSpeechText = "Explaining your current experiment step...";
         this.updateHUDDisplay();
 
         const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
-        const res = await this.aiClient.askAI(exp?.currentStepTitle || '', 'current_step', exp as any);
+        const res = await this.aiClient.askAI('', 'steps', exp as any);
         this.speak(res.reply, res.emotion);
         if (this.callbacks.onStepRequested) {
             this.callbacks.onStepRequested();
         }
     }
 
+    public async handleRequestGuide() {
+        this.currentState = 'GUIDE';
+        this.setupHUDButtons();
+        this.audio.playDroidChirp('thinking');
+        this.updateHUDDisplay();
+
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        const res = await this.aiClient.askAI('', 'guide', exp as any);
+        this.speak(res.reply, res.emotion);
+    }
+
+    public async handleRequestObservations() {
+        this.currentState = 'OBSERVATIONS';
+        this.setupHUDButtons();
+        this.audio.playDroidChirp('happy');
+        this.updateHUDDisplay();
+
+        const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;
+        const res = await this.aiClient.askAI('', 'observations', exp as any);
+        this.speak(res.reply, res.emotion);
+    }
+
+    public async handleRequestCurrentStep() {
+        return this.handleRequestSteps();
+    }
+
     public async handleRequestStep() {
-        return this.handleRequestCurrentStep();
+        return this.handleRequestSteps();
     }
 
     public async handleRequestHint() {
@@ -1201,9 +1510,9 @@ export class Atom8Robot {
     }
 
     public async handleRequestTheory() {
-        this.setState('THINKING');
+        this.currentState = 'THEORY';
+        this.setupHUDButtons();
         this.audio.playDroidChirp('thinking');
-        this.currentSpeechText = "Connecting quantum transitions & Planck's relation...";
         this.updateHUDDisplay();
 
         const exp = this.callbacks.getCurrentExperimentState ? this.callbacks.getCurrentExperimentState() : null;

@@ -141,7 +141,230 @@ export interface StepGuidance {
     hint: string;
 }
 
+export interface ExperimentStepItem {
+    stepNumber: number;
+    title: string;
+    status: 'completed' | 'in_progress' | 'pending';
+    description: string;
+}
+
+export interface InteractionGuideItem {
+    action: string;
+    desktop: string;
+    vr: string;
+}
+
+export interface ObservationRecord {
+    letter: string;
+    name: string;
+    formula: string;
+    flameColor: string;
+    isObserved: boolean;
+}
+
 export class ChemistryKnowledge {
+    /**
+     * EXPERIMENT STEPS (Wrist Menu Feature 1)
+     * Complete procedure dynamically showing completed [✓], in-progress [▶], and pending [⏳] steps
+     * strictly based on the student's real actions and telemetry.
+     */
+    public static getContextualExperimentSteps(ctx: any): { 
+        reply: string; 
+        emotion: 'speaking' | 'happy'; 
+        steps: ExperimentStepItem[] 
+    } {
+        const isAllCompleted = Boolean(ctx?.isExperimentCompleted || (ctx?.completedSalts && ctx?.completedSalts.length >= 6));
+        const sampleL = ctx?.currentSaltLetter || 'A';
+        const mysteryName = ctx?.currentMysteryName || `Mystery Salt ${sampleL}`;
+        const completedSalts = new Set<string>(ctx?.completedSalts || []);
+
+        const isGloveDone = Boolean(ctx?.areGlovesEquipped);
+        const isWireDone = Boolean(ctx?.isWireGrabbed || ctx?.isWireDipped || ctx?.isFlameResultObserved || completedSalts.has(sampleL));
+        const isDipDone = Boolean(ctx?.isWireDipped || ctx?.isFlameResultObserved || completedSalts.has(sampleL));
+        const isBurnerDone = Boolean(ctx?.isBurnerLit);
+        const isHeatDone = Boolean(ctx?.isFlameResultObserved || completedSalts.has(sampleL));
+        const isEmissionDone = Boolean(ctx?.isFlameResultObserved || completedSalts.has(sampleL));
+        const isRecordDone = Boolean(completedSalts.has(sampleL) || isAllCompleted);
+
+        const steps: ExperimentStepItem[] = [
+            {
+                stepNumber: 1,
+                title: "Wear Nitrile Safety Gloves",
+                status: isAllCompleted || isGloveDone ? 'completed' : 'in_progress',
+                description: "Put on blue protective nitrile gloves from dispenser box."
+            },
+            {
+                stepNumber: 2,
+                title: "Grab Platinum Inoculating Wire",
+                status: isAllCompleted || isWireDone ? 'completed' : (!isGloveDone ? 'pending' : 'in_progress'),
+                description: "Pick up the clean platinum wire loop from table stand."
+            },
+            {
+                stepNumber: 3,
+                title: `Collect ${mysteryName} Sample`,
+                status: isAllCompleted || isDipDone ? 'completed' : ((!isGloveDone || !ctx?.isWireGrabbed) ? 'pending' : 'in_progress'),
+                description: `Dip wire loop into watch glass ${sampleL} crystals.`
+            },
+            {
+                stepNumber: 4,
+                title: "Ignite Bunsen Burner (Blue Flame)",
+                status: isAllCompleted || isBurnerDone ? 'completed' : ((!isGloveDone || (!ctx?.isWireGrabbed && !ctx?.isWireDipped)) ? 'pending' : 'in_progress'),
+                description: "Poke burner switch for high-temperature non-luminous blue flame."
+            },
+            {
+                stepNumber: 5,
+                title: "Heat Sample in Hot Outer Flame Cone",
+                status: isAllCompleted || isHeatDone ? 'completed' : ((!isBurnerDone || !ctx?.isWireDipped) ? 'pending' : (ctx?.isWireInFlame ? 'in_progress' : 'in_progress')),
+                description: "Hold coated wire loop in the outer blue flame cone (~1500°C)."
+            },
+            {
+                stepNumber: 6,
+                title: "Observe Characteristic Flame Emission",
+                status: isAllCompleted || isEmissionDone ? 'completed' : (ctx?.isWireInFlame ? 'in_progress' : 'pending'),
+                description: "Observe emitted photon wavelength as excited electrons relax."
+            },
+            {
+                stepNumber: 7,
+                title: "Record Observation in 3D Lab Notebook",
+                status: isAllCompleted || isRecordDone ? 'completed' : (ctx?.isFlameResultObserved ? 'in_progress' : 'pending'),
+                description: "Identify metal cation by flame color and log into observations."
+            }
+        ];
+
+        if (isAllCompleted) {
+            return {
+                reply: "Practical Complete! 🎉 All 7 steps finished and all 6 mystery salts identified and logged in your 3D Lab Notebook!",
+                emotion: 'happy',
+                steps
+            };
+        }
+
+        const activeStep = steps.find(s => s.status === 'in_progress') || steps[0];
+        const completedCount = steps.filter(s => s.status === 'completed').length;
+        const reply = `Beep-whirr! Procedure Progress: ${completedCount} of 7 steps completed! Currently active: Step ${activeStep.stepNumber} (${activeStep.title}).`;
+
+        return {
+            reply,
+            emotion: 'speaking',
+            steps
+        };
+    }
+
+    /**
+     * INTERACTION GUIDE (Wrist Menu Feature 2)
+     * Explains how to interact with laboratory objects, hand tracking, grabbing, poking,
+     * burner switch, and desktop controls.
+     */
+    public static getContextualInteractionGuide(_ctx?: any): { 
+        reply: string; 
+        emotion: 'speaking'; 
+        guideItems: InteractionGuideItem[] 
+    } {
+        const guideItems: InteractionGuideItem[] = [
+            {
+                action: "Safety Gloves",
+                desktop: "Click nitrile glove box dispenser on left table",
+                vr: "Poke or touch glove box with index finger"
+            },
+            {
+                action: "Platinum Wire",
+                desktop: "Click platinum wire loop on the table stand to grab",
+                vr: "Bring hand within 18cm and make a fist or pinch to grab"
+            },
+            {
+                action: "Dip Salt Sample",
+                desktop: "Move cursor/wire over target watch glass to collect crystals",
+                vr: "Lower grabbed wire loop into watch glass crystals"
+            },
+            {
+                action: "Bunsen Burner",
+                desktop: "Click circular power switch on burner base to toggle",
+                vr: "Poke circular power switch on burner base with index finger"
+            },
+            {
+                action: "Flame Testing",
+                desktop: "Move wire loop into blue flame cone; hold 3.5s",
+                vr: "Hold wire loop steady inside the blue flame cone for 3.5s"
+            },
+            {
+                action: "Release Wire",
+                desktop: "Press 'Q' key on keyboard or click [Release Wire] button",
+                vr: "Open hand flat or poke holographic [Release Wire] button"
+            },
+            {
+                action: "ATOM-8 AI Companion",
+                desktop: "Click robot or press 'C' to open/close menu; click buttons",
+                vr: "Poke ATOM-8 body to open panel; poke 3D buttons or speak"
+            }
+        ];
+
+        return {
+            reply: "Bleep-boop! Interaction Guide: In VR, use fist or pinch to grab objects and poke switches with your index finger. In Desktop, click to interact, use WASD to move, and press 'Q' to release the wire!",
+            emotion: 'speaking',
+            guideItems
+        };
+    }
+
+    /**
+     * OBSERVATION TABLE (Wrist Menu Feature 5)
+     * Returns student's actual observations and recorded results across all 6 salts.
+     * Strictly avoids guessing or spoiling untested salts!
+     */
+    public static getContextualObservations(ctx: any): { 
+        reply: string; 
+        emotion: 'speaking' | 'happy'; 
+        observations: ObservationRecord[] 
+    } {
+        const completedSalts = new Set<string>(ctx?.completedSalts || []);
+        const currentL = ctx?.currentSaltLetter || 'A';
+        const isCurrentObserved = Boolean(ctx?.isFlameResultObserved);
+
+        const ALL_SALTS = [
+            { letter: 'A', name: 'Lithium Chloride', formula: 'LiCl', flameColor: 'Crimson Red' },
+            { letter: 'B', name: 'Sodium Chloride', formula: 'NaCl', flameColor: 'Golden Yellow' },
+            { letter: 'C', name: 'Potassium Chloride', formula: 'KCl', flameColor: 'Pale Lilac' },
+            { letter: 'D', name: 'Calcium Chloride', formula: 'CaCl₂', flameColor: 'Brick Red' },
+            { letter: 'E', name: 'Copper(II) Chloride', formula: 'CuCl₂', flameColor: 'Blue-Green' },
+            { letter: 'F', name: 'Strontium Chloride', formula: 'SrCl₂', flameColor: 'Scarlet Red' }
+        ];
+
+        const observations: ObservationRecord[] = ALL_SALTS.map(s => {
+            const isObserved = completedSalts.has(s.letter) || (currentL === s.letter && isCurrentObserved) || Boolean(ctx?.isExperimentCompleted);
+            return {
+                letter: s.letter,
+                name: s.name,
+                formula: s.formula,
+                flameColor: isObserved ? s.flameColor : 'Pending Test',
+                isObserved
+            };
+        });
+
+        const observedCount = observations.filter(o => o.isObserved).length;
+
+        if (observedCount >= 6) {
+            return {
+                reply: "Bzzt-beep! 🎉 Full spectroscopy results recorded! All 6 mystery salts (LiCl, NaCl, KCl, CaCl₂, CuCl₂, SrCl₂) have been identified and logged!",
+                emotion: 'happy',
+                observations
+            };
+        }
+
+        if (observedCount === 0) {
+            return {
+                reply: "Beep-whirr! Observation Table: 0 of 6 mystery salts tested so far. Test salts in the blue flame to record their emission spectra!",
+                emotion: 'speaking',
+                observations
+            };
+        }
+
+        const observedLetters = observations.filter(o => o.isObserved).map(o => `${o.letter} (${o.flameColor})`).join(', ');
+        return {
+            reply: `Beep-whirr! Observation Table: ${observedCount} of 6 salts tested and recorded: ${observedLetters}. Continue testing remaining samples!`,
+            emotion: 'speaking',
+            observations
+        };
+    }
+
     /**
      * CURRENT STEP EXPLANATION
      * Explains ONLY the student's current experiment step based on real active state.

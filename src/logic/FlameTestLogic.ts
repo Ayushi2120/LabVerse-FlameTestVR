@@ -64,6 +64,7 @@ export interface LiveExperimentContext {
     nextValidAction: string;
     currentStepTitle: string;
     currentStepDescription: string;
+    observations?: Array<{ letter: string; name: string; formula: string; flameColor: string; isObserved: boolean }>;
 }
 
 export class FlameTestLogic {
@@ -1123,6 +1124,26 @@ export class FlameTestLogic {
             nextValidAction = "Follow the 3D directional arrow and experiment guidance.";
         }
 
+        const ALL_SALTS = [
+            { letter: 'A', name: 'Lithium Chloride', formula: 'LiCl', flameName: 'Crimson Red' },
+            { letter: 'B', name: 'Sodium Chloride', formula: 'NaCl', flameName: 'Golden Yellow' },
+            { letter: 'C', name: 'Potassium Chloride', formula: 'KCl', flameName: 'Pale Lilac' },
+            { letter: 'D', name: 'Calcium Chloride', formula: 'CaCl₂', flameName: 'Brick Red' },
+            { letter: 'E', name: 'Copper(II) Chloride', formula: 'CuCl₂', flameName: 'Blue-Green' },
+            { letter: 'F', name: 'Strontium Chloride', formula: 'SrCl₂', flameName: 'Scarlet Red' }
+        ];
+
+        const observations = ALL_SALTS.map(s => {
+            const isObserved = this.completedSalts.has(s.letter) || (sample.letter === s.letter && isFlameResultObserved) || isCompleted;
+            return {
+                letter: s.letter,
+                name: s.name,
+                formula: s.formula,
+                flameColor: isObserved ? s.flameName : 'Pending Test',
+                isObserved
+            };
+        });
+
         return {
             experimentName: "Flame Test (Metal Chloride Spectroscopy)",
             state: this.currentState,
@@ -1147,7 +1168,8 @@ export class FlameTestLogic {
             completedCount: this.completedSalts.size,
             nextValidAction,
             currentStepTitle,
-            currentStepDescription
+            currentStepDescription,
+            observations
         };
     }
 

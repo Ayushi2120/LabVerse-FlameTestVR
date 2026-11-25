@@ -33,6 +33,7 @@ export interface AIExperimentContext {
     nextValidAction?: string;
     currentStepTitle?: string;
     currentStepDescription?: string;
+    observations?: Array<{ letter: string; name: string; formula: string; flameColor: string; isObserved: boolean }>;
 }
 
 export interface AIChatResponse {
@@ -86,7 +87,7 @@ export class Atom8AIClient {
      */
     public async askAI(
         query: string,
-        mode: 'ask' | 'current_step' | 'step' | 'hint' | 'explain' | 'theory' | 'video' | 'experiments' | 'quiz' = 'ask',
+        mode: 'ask' | 'steps' | 'guide' | 'observations' | 'theory' | 'video' | 'experiments' | 'hint' | 'quiz' | 'current_step' | 'step' | 'explain' = 'ask',
         context: AIExperimentContext = {}
     ): Promise<AIChatResponse> {
         // Track progressive hint tier
@@ -138,7 +139,19 @@ export class Atom8AIClient {
         let fallbackReply = "";
         let fallbackEmotion: 'speaking' | 'happy' | 'thinking' | 'question' = 'speaking';
 
-        if (mode === 'current_step' || mode === 'step') {
+        if (mode === 'steps') {
+            const stepsResult = ChemistryKnowledge.getContextualExperimentSteps(context);
+            fallbackReply = stepsResult.reply;
+            fallbackEmotion = stepsResult.emotion;
+        } else if (mode === 'guide') {
+            const guideResult = ChemistryKnowledge.getContextualInteractionGuide(context);
+            fallbackReply = guideResult.reply;
+            fallbackEmotion = guideResult.emotion;
+        } else if (mode === 'observations') {
+            const obsResult = ChemistryKnowledge.getContextualObservations(context);
+            fallbackReply = obsResult.reply;
+            fallbackEmotion = obsResult.emotion;
+        } else if (mode === 'current_step' || mode === 'step') {
             const step = ChemistryKnowledge.getContextualCurrentStep(context);
             fallbackReply = step.reply;
             fallbackEmotion = step.emotion;

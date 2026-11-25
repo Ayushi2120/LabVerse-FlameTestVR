@@ -1009,9 +1009,11 @@ async function init() {
     const atom8CloseBtn = document.getElementById('atom8-close-btn');
     const atom8SpeechBox = document.getElementById('atom8-speech-box');
     const atom8StatusPill = document.getElementById('atom8-status-pill');
-    const atom8BtnCurrentStep = document.getElementById('atom8-btn-current-step');
-    const atom8BtnHint = document.getElementById('atom8-btn-hint');
+    const atom8BtnSteps = document.getElementById('atom8-btn-steps');
+    const atom8BtnGuide = document.getElementById('atom8-btn-guide');
     const atom8BtnTheory = document.getElementById('atom8-btn-theory');
+    const atom8BtnHint = document.getElementById('atom8-btn-hint');
+    const atom8BtnObservations = document.getElementById('atom8-btn-observations');
     const atom8BtnVideo = document.getElementById('atom8-btn-video');
     const atom8BtnExperiments = document.getElementById('atom8-btn-experiments');
     const atom8BtnQuiz = document.getElementById('atom8-btn-quiz');
@@ -1066,11 +1068,29 @@ async function init() {
         });
     }
 
-    if (atom8BtnCurrentStep) {
-        atom8BtnCurrentStep.addEventListener('click', (e) => {
+    if (atom8BtnSteps) {
+        atom8BtnSteps.addEventListener('click', (e) => {
             e.stopPropagation();
             if (logicEngine.getAtom8Robot()) {
-                logicEngine.getAtom8Robot().handleRequestCurrentStep();
+                logicEngine.getAtom8Robot().handleRequestSteps();
+            }
+        });
+    }
+
+    if (atom8BtnGuide) {
+        atom8BtnGuide.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestGuide();
+            }
+        });
+    }
+
+    if (atom8BtnTheory) {
+        atom8BtnTheory.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (logicEngine.getAtom8Robot()) {
+                logicEngine.getAtom8Robot().handleRequestTheory();
             }
         });
     }
@@ -1084,11 +1104,11 @@ async function init() {
         });
     }
 
-    if (atom8BtnTheory) {
-        atom8BtnTheory.addEventListener('click', (e) => {
+    if (atom8BtnObservations) {
+        atom8BtnObservations.addEventListener('click', (e) => {
             e.stopPropagation();
             if (logicEngine.getAtom8Robot()) {
-                logicEngine.getAtom8Robot().handleRequestTheory();
+                logicEngine.getAtom8Robot().handleRequestObservations();
             }
         });
     }

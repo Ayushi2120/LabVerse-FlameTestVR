@@ -162,7 +162,7 @@
         position: absolute;
         top: 20px;
         right: 20px;
-        width: 360px;
+        width: 388px;
         max-width: calc(100vw - 40px);
         background: rgba(10, 16, 28, 0.94);
         border: 1.5px solid rgba(0, 229, 255, 0.4);
@@ -278,18 +278,18 @@
 
       .atom8-actions {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 6px;
         margin-bottom: 12px;
       }
 
       .atom8-chip {
-        padding: 7px 6px;
+        padding: 7px 4px;
         background: rgba(30, 41, 59, 0.8);
         border: 1px solid rgba(56, 189, 248, 0.3);
         border-radius: 8px;
         color: #e2e8f0;
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 600;
         cursor: pointer;
         text-align: center;
@@ -386,9 +386,11 @@
       </div>
 
       <div class="atom8-actions">
-        <button id="atom8-btn-hint" class="atom8-chip" title="Contextual hint based on current state">💡 Hint</button>
-        <button id="atom8-btn-current-step" class="atom8-chip" title="Explain current experiment step">📋 Current Step</button>
+        <button id="atom8-btn-steps" class="atom8-chip" title="Complete procedure & dynamic step progress">📋 Steps</button>
+        <button id="atom8-btn-guide" class="atom8-chip" title="Interaction guide for lab objects & hand controls">🎮 Guide</button>
         <button id="atom8-btn-theory" class="atom8-chip" title="Quantum transition & chemistry theory">⚛️ Theory</button>
+        <button id="atom8-btn-hint" class="atom8-chip" title="Progressive Socratic hint based on current state">💡 Hint</button>
+        <button id="atom8-btn-observations" class="atom8-chip" title="Spectroscopy observation table for all 6 salts">📊 Observations</button>
         <button id="atom8-btn-video" class="atom8-chip" title="Educational video guide">🎬 Video</button>
         <button id="atom8-btn-experiments" class="atom8-chip" title="Available LABVERSE experiments">🧪 Experiments</button>
         <button id="atom8-btn-quiz" class="atom8-chip" title="Interactive chemistry quiz">❓ Quiz</button>

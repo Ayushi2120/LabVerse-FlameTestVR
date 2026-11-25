@@ -112,13 +112,14 @@ LIVE LABORATORY TELEMETRY (SINGLE SOURCE OF TRUTH):
 - Experiment Completed: ${ctx.isExperimentCompleted ? 'YES (All 6 salts tested!)' : 'NO'}
 
 STRICT INTERACTION RULES:
-1. CURRENT STEP EXPLANATION: Explain ONLY the student's CURRENT experiment step based on their real state (${ctx.currentStepTitle || 'testing'}). Do NOT explain completed steps as pending. Do NOT tell the student to perform actions they have already finished. Explain what this active step involves chemically and operationally.
-2. HINT: Give a contextual hint focused strictly on the current step and the action they are attempting.
-3. FLAME TEST: If flame color is NOT yet observed, explain how to test the sample and DO NOT spoil the secret flame color! Only explain the color once observed.
-4. THEORY: Explain the quantum atomic theory relevant to the current step.
-5. VIDEO: Explain that the educational video stream is offline in this standalone build, while the interactive 3D simulation on the bench provides the complete procedural demonstration.
-6. EXPERIMENTS: List the available LABVERSE experiments (Flame Test and Litmus Paper Test).
-7. GENERAL QUESTIONS: Answer based on the live experiment state above. Never invent observations or pretend the student has performed an action that they haven't. Never encourage unsafe chemical mixing.`;
+1. EXPERIMENT STEPS: Display the complete 7-step experiment procedure dynamically indicating completed steps [✓], in-progress step [▶], and pending steps [⏳] based strictly on live experiment telemetry (${ctx.currentStepTitle || 'testing'}). Do NOT treat finished actions as pending.
+2. INTERACTION GUIDE: Explain how to interact with laboratory equipment: hand tracking (pinch/fist grab, finger poking burner switch), dipping into salts, flame heating, wire release ('Q' or 3D button), and ATOM-8 gesture interaction.
+3. THEORY: Explain quantum atomic excitation theory relevant to the current step (Planck relation ΔE = h*nu = hc/lambda, Bohr energy levels, electron relaxation).
+4. VIDEO GUIDE: Explain that the educational video stream is offline in this standalone build, while the interactive 3D simulation on the bench provides the complete procedural demonstration.
+5. OBSERVATION TABLE: Display the student's actual observations and recorded results for salts A through F. Only reveal colors for salts already observed or completed. Never invent or spoil unobserved results.
+6. EXPLORE EXPERIMENTS: List the available LABVERSE experiments (Flame Test and Litmus Paper Test).
+7. HINT: Give a contextual progressive Socratic hint focused strictly on the current step.
+8. GENERAL QUESTIONS: Answer based on the live experiment state above. Never invent observations or pretend the student has performed an action that they haven't. Never encourage unsafe chemical mixing.`;
 }
 
 /**
@@ -225,9 +226,86 @@ async function callOpenAI(prompt, systemInstruction, config) {
  * Intelligent Socratic fallback when API keys are unconfigured or network is unreachable.
  * Guaranteed 100% awareness of live telemetry and the student's exact stage.
  */
-function getSocraticFallback(message, mode, context) {
+export function getSocraticFallback(message, mode, context) {
     const ctx = context || {};
     const q = (message || '').toLowerCase();
+
+    if (mode === 'steps') {
+        const isAllCompleted = Boolean(ctx.isExperimentCompleted || (ctx.completedSalts && ctx.completedSalts.length >= 6));
+        const sampleL = ctx.currentSaltLetter || 'A';
+        const mysteryName = ctx.currentMysteryName || `Mystery Salt ${sampleL}`;
+        const completedSalts = new Set(ctx.completedSalts || []);
+
+        const isGloveDone = Boolean(ctx.areGlovesEquipped);
+        const isWireDone = Boolean(ctx.isWireGrabbed || ctx.isWireDipped || ctx.isFlameResultObserved || completedSalts.has(sampleL));
+        const isDipDone = Boolean(ctx.isWireDipped || ctx.isFlameResultObserved || completedSalts.has(sampleL));
+        const isBurnerDone = Boolean(ctx.isBurnerLit);
+        const isHeatDone = Boolean(ctx.isFlameResultObserved || completedSalts.has(sampleL));
+        const isEmissionDone = Boolean(ctx.isFlameResultObserved || completedSalts.has(sampleL));
+        const isRecordDone = Boolean(completedSalts.has(sampleL) || isAllCompleted);
+
+        const steps = [
+            { step: 1, name: "Wear Nitrile Safety Gloves", done: isAllCompleted || isGloveDone },
+            { step: 2, name: "Grab Platinum Wire Loop", done: isAllCompleted || isWireDone },
+            { step: 3, name: `Collect ${mysteryName} Crystals`, done: isAllCompleted || isDipDone },
+            { step: 4, name: "Ignite Bunsen Burner (Blue Flame)", done: isAllCompleted || isBurnerDone },
+            { step: 5, name: "Heat Sample in Blue Outer Flame Cone", done: isAllCompleted || isHeatDone },
+            { step: 6, name: "Observe Characteristic Emission", done: isAllCompleted || isEmissionDone },
+            { step: 7, name: "Record Observation in Lab Notebook", done: isAllCompleted || isRecordDone }
+        ];
+
+        if (isAllCompleted) {
+            return {
+                reply: "Practical Complete! 🎉 All 7 steps finished and all 6 mystery salts identified and logged in your 3D Lab Notebook!",
+                emotion: "happy"
+            };
+        }
+
+        const activeStep = steps.find(s => !s.done) || steps[0];
+        const doneCount = steps.filter(s => s.done).length;
+        return {
+            reply: `Beep-whirr! Procedure Progress: ${doneCount} of 7 steps completed! Currently active: Step ${activeStep.step} (${activeStep.name}).`,
+            emotion: "speaking"
+        };
+    }
+
+    if (mode === 'guide') {
+        return {
+            reply: "Bleep-boop! Interaction Guide: In VR, make a fist or pinch to grab the wire, and poke the burner switch with your index finger. In Desktop, click on items to interact, press WASD to move, and Q to release the wire!",
+            emotion: "speaking"
+        };
+    }
+
+    if (mode === 'observations') {
+        const completedSalts = new Set(ctx.completedSalts || []);
+        const ALL_SALTS = [
+            { letter: 'A', name: 'Lithium Chloride', flameColor: 'Crimson Red' },
+            { letter: 'B', name: 'Sodium Chloride', flameColor: 'Golden Yellow' },
+            { letter: 'C', name: 'Potassium Chloride', flameColor: 'Pale Lilac' },
+            { letter: 'D', name: 'Calcium Chloride', flameColor: 'Brick Red' },
+            { letter: 'E', name: 'Copper(II) Chloride', flameColor: 'Blue-Green' },
+            { letter: 'F', name: 'Strontium Chloride', flameColor: 'Scarlet Red' }
+        ];
+
+        const recorded = ALL_SALTS.filter(s => completedSalts.has(s.letter) || (ctx.currentSaltLetter === s.letter && ctx.isFlameResultObserved) || ctx.isExperimentCompleted);
+        if (recorded.length >= 6) {
+            return {
+                reply: "Bzzt-beep! 🎉 Full spectroscopy results recorded! All 6 mystery salts (LiCl, NaCl, KCl, CaCl₂, CuCl₂, SrCl₂) have been identified and logged!",
+                emotion: "happy"
+            };
+        }
+        if (recorded.length === 0) {
+            return {
+                reply: "Beep-whirr! Observation Table: 0 of 6 mystery salts tested so far. Test salts in the blue flame to record their emission spectra!",
+                emotion: "speaking"
+            };
+        }
+        const summary = recorded.map(r => `${r.name} (${r.flameColor})`).join(', ');
+        return {
+            reply: `Beep-whirr! Observation Table: ${recorded.length} of 6 salts recorded: ${summary}. Continue testing remaining samples!`,
+            emotion: "speaking"
+        };
+    }
 
     if (mode === 'current_step' || mode === 'step') {
         if (!ctx.areGlovesEquipped) {
@@ -410,6 +488,12 @@ function getSocraticFallback(message, mode, context) {
                 emotion: "happy"
             };
         }
+        if (ctx.isWireInFlame || ctx.isFlameResultObserved) {
+            return {
+                reply: "Bohr's atomic theory states electrons occupy quantized energy levels (n = 1, 2, 3...). Flame heat excites electrons (E₂). Returning to ground state (E₁) releases a photon satisfying Planck's relation: ΔE = E₂ - E₁ = h·ν = hc/λ, forming a discrete emission line!",
+                emotion: "speaking"
+            };
+        }
         if (!ctx.areGlovesEquipped || (!ctx.isWireGrabbed && !ctx.isWireDipped)) {
             return {
                 reply: "In atomic spectroscopy, contamination control is vital. Platinum wires and clean gloves ensure no foreign alkali metal residues create false emission lines in our observations.",
@@ -426,18 +510,6 @@ function getSocraticFallback(message, mode, context) {
             return {
                 reply: "A non-luminous blue Bunsen flame undergoes complete combustion (CH₄ + 2O₂ → CO₂ + 2H₂O), generating ~1500°C without soot (unburnt carbon) that would produce interfering yellow blackbody radiation.",
                 emotion: "speaking"
-            };
-        }
-        if (ctx.isWireInFlame || ctx.isFlameResultObserved) {
-            return {
-                reply: "Bohr's atomic theory states electrons occupy quantized energy levels (n = 1, 2, 3...). Flame heat excites electrons (E₂). Returning to ground state (E₁) releases a photon satisfying Planck's relation: ΔE = E₂ - E₁ = h·ν = hc/λ, forming a discrete emission line!",
-                emotion: "speaking"
-            };
-        }
-        if (ctx.isExperimentCompleted) {
-            return {
-                reply: "Atomic emission spectroscopy is foundational to modern science: astronomers analyze starlight absorption and emission lines to determine the chemical composition and temperature of distant stars and galaxies!",
-                emotion: "happy"
             };
         }
         return {
@@ -508,7 +580,13 @@ export async function handleAiChatRequest(req, res) {
 
             // Build tailored prompt based on mode
             let prompt = message;
-            if (mode === 'current_step' || mode === 'step') {
+            if (mode === 'steps') {
+                prompt = `Display the complete 7-step experiment procedure for our flame test practical. Indicate which steps are completed and explain the currently active step (${experimentContext.currentStepTitle || 'testing'}). Keep it encouraging, accurate, and Class 10 friendly!`;
+            } else if (mode === 'guide') {
+                prompt = `Explain how to interact with the laboratory equipment using VR hand-tracking gestures (fist/pinch to grab wire, poking burner switch) and desktop controls (click, WASD movement, Q to release wire).`;
+            } else if (mode === 'observations') {
+                prompt = `Review the student's actual observations and recorded results across all 6 flame test salts. Completed salts: ${(experimentContext.completedSalts || []).join(', ') || 'None yet'}. Observed flame: ${experimentContext.observedFlameColor || 'None'}. Summarize what has been recorded so far without spoiling untested salts!`;
+            } else if (mode === 'current_step' || mode === 'step') {
                 prompt = `Explain to me what step we are currently on in our flame test practical. My current step is: "${experimentContext.currentStepTitle || 'testing'}" (${experimentContext.currentStepDescription || ''}). Explain ONLY this current active step in a clear, educational, Class 10 friendly way. Do NOT tell me to perform actions I have already completed, and do NOT explain completed steps as pending.`;
             } else if (mode === 'hint') {
                 prompt = `Give me a progressive Socratic hint (Tier ${experimentContext.hintTier || 1} of 3) for my current step (${experimentContext.currentStepTitle || 'testing'}). Guide my scientific thinking without giving away answers prematurely.`;
